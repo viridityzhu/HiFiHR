@@ -7,10 +7,13 @@ S<sup>2</sup>HAND presents a self-supervised 3D hand reconstruction network that
 ## Code
 ### Environment
 Training is implemented with PyTorch. This code was developed under Python 3.6 and Pytorch 1.1.
+I am using CUDA 10.2, so my environment is:
+pytorch-1.6.0-py3.6_cuda10.2.89_cudnn7.6.5_0
 
 ```
 conda create -n hand python=3.6
 conda activate hand
+conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.2 -c pytorch
 ```
 
 Please compile the extension modules by running:
@@ -23,6 +26,8 @@ python setup.py install
 rm -r neural_renderer
 ```
 Note that we modified the ```neural_renderer/lighting.py``` compared to [daniilidis-group/neural_renderer](https://github.com/daniilidis-group/neural_renderer).
+
+Note that under pytorch1.6, the neural_renderer may need to be modified before installation: https://github.com/facebookresearch/phosa/issues/6
 
 ### Data
 For example, for 3D hand reconstruction task on the FreiHAND dataset:
