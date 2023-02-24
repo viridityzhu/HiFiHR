@@ -42,8 +42,11 @@ For HO3D dataset:
 - Offline 2D keypoint detection use a off-the-shelf detector like [pytorch-openpose](https://github.com/Hzzone/pytorch-openpose). 
    - We also provide detected 2D keypoints for [FreiHAND training set](https://www.dropbox.com/s/lx9nk8b90a2mgqy/freihand-train.json?dl=0). You may downlad and change the ```self.open_2dj_lists``` in the ```examples/data/dataset.py``` accordingly.
    - Or Download the ```hand_pose_model.pth``` provided by [pytorch-openpose](https://github.com/Hzzone/pytorch-openpose#download-the-models), and put the file to ```examples/openpose_detector/src```. Then use the following script  and modify the input and output directory accordingly. 
+   (https://drive.google.com/file/d/1yVyIsOD32Mq28EHrVVlZbISDN7Icgaxw/view?usp=share_link)
 
-        ```python example/openpose_detector/hand_dectect.py```
+        ```
+        cd examples/openpose_detector
+        python hand_detect.py```
 
 
 ### Training and Evaluation

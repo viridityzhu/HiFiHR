@@ -15,7 +15,7 @@ import torch
 import json
 import time
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '5'
+# os.environ["CUDA_VISIBLE_DEVICES"] = '5'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -79,10 +79,13 @@ if __name__ == '__main__':
     
 
     # for dataset
-    image_folder = '/data/FreiHAND_pub_v2/training/rgb'
-    save_folder = '/S2HAND/outputs/openpose'
+    # image_folder = '/data/FreiHAND_pub_v2/training/rgb'
+    image_folder = '/storage_fast/jyzhu/HandRecon/freihand/evaluation/rgb'
+    save_folder = '/storage_fast/jyzhu/HandRecon/outputs/openpose'
+    save_name = 'freihand-eval.json'
     
     files= os.listdir(image_folder)
+    print(f'Find {len(files)} images')
     files.sort(key=lambda x: int(x[:8]))
     hand_estimation = pose_detector()
     #import pdb;pdb.set_trace()
@@ -91,30 +94,30 @@ if __name__ == '__main__':
     all_hand_names = []
     end = time.time()
     for file in files:
-        if int(file[:8])>28999 and int(file[:8])<32560:#32560
-            #import pdb;pdb.set_trace()
-            image_path = os.path.join(image_folder,file)
-            oriImg = cv2.imread(image_path)  # B,G,R
-            hand_peaks = []
-            peaks,values = hand_estimation(images=oriImg)
-            #import pdb;pdb.set_trace()
-            hand_peaks.append(peaks)
-            if int(file[:8])%500 == 0:
-                save_img_path = os.path.join(save_folder,'image')
-                os.makedirs(save_img_path, exist_ok=True)
-                canvas = copy.deepcopy(oriImg)
-                canvas = util.draw_handpose(canvas, hand_peaks)
-                plt.imshow(canvas[:, :, [2, 1, 0]])
-                plt.axis('off')
-                plt.savefig(os.path.join(save_img_path,file))
-                print('{0} demo out saved!'.format(file))
-                plt.close()
-                print('Time {0:.3f}\t'.format(time.time() - end))
-            all_hand_peaks.append(peaks)
-            all_hand_peaks_values.append(values)
-            #all_hand_names.append(np.array([int(file[:8])]))
-            all_hand_names.append(np.array([file]))
-            #import pdb;pdb.set_trace()
-    detect_out_path = os.path.join(save_folder,'freihand-train.json')
+        # if int(file[:8])>28999 and int(file[:8])<32560:#32560
+        #import pdb;pdb.set_trace()
+        image_path = os.path.join(image_folder,file)
+        oriImg = cv2.imread(image_path)  # B,G,R
+        hand_peaks = []
+        peaks,values = hand_estimation(images=oriImg)
+        #import pdb;pdb.set_trace()
+        hand_peaks.append(peaks)
+        if int(file[:8])%500 == 0:
+            save_img_path = os.path.join(save_folder,'image')
+            os.makedirs(save_img_path, exist_ok=True)
+            canvas = copy.deepcopy(oriImg)
+            canvas = util.draw_handpose(canvas, hand_peaks)
+            plt.imshow(canvas[:, :, [2, 1, 0]])
+            plt.axis('off')
+            plt.savefig(os.path.join(save_img_path,file))
+            print('{0} demo out saved!'.format(file))
+            plt.close()
+            print('Time {0:.3f}\t'.format(time.time() - end))
+        all_hand_peaks.append(peaks)
+        all_hand_peaks_values.append(values)
+        #all_hand_names.append(np.array([int(file[:8])]))
+        all_hand_names.append(np.array([file]))
+        #import pdb;pdb.set_trace()
+    detect_out_path = os.path.join(save_folder, save_name)
     dump(detect_out_path,all_hand_peaks,all_hand_peaks_values,all_hand_names)
     

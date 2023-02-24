@@ -1718,7 +1718,8 @@ class FreiHand:
             self.verts_list = []
             #self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % self.set_name))
             #self.open_2dj_lists = json_load('/data/FreiHand_save/debug/detect_all.json')
-            self.open_2dj_lists = json_load(os.path.join(self.base_path, 'openpose_v2/training', 'detect_all.json'))
+            # self.open_2dj_lists = json_load(os.path.join(self.base_path, 'openpose_v2/training', 'detect_all.json'))
+            self.open_2dj_lists = json_load(os.path.join(self.base_path, 'outputs', 'freihand-train_openpose_keypoints.json'))
             self.open_2dj_list = self.open_2dj_lists[0]
             self.open_2dj_con_list = self.open_2dj_lists[1]
             #self.CRFmask_dir = '/data/FreiHand_save/CRFmask/training'
