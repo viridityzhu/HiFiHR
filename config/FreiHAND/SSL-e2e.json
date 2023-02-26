@@ -4,8 +4,7 @@
     "freihand_base_path": "/storage_fast/jyzhu/HandRecon/freihand",
     "base_out_path": "/storage_fast/jyzhu/HandRecon/outputs/freihand/SSL-e2e",
     "is_write_tb": true,
-    "writer_topic": "/storage_fast/jyzhu/HandRecon/runs/freihand/SSL-e2e/",
-
+    "writer_topic": "/runs/freihand/SSL-e2e/", 
     "total_epochs": 180,
     "init_lr": 0.001,
     "lr_steps": [30, 60, 90, 120, 150],

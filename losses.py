@@ -272,9 +272,9 @@ def bone_direction_loss(j2d, open_2dj, open_2dj_con):
                                         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
                                         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
                                         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-                                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]).to(torch.uint8)
+                                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]).to(torch.bool)
     confi_matrixs = torch.bmm(open_2dj_con,torch.transpose(open_2dj_con,1,2)).mul(confidence_mat_21_21.unsqueeze(0).to(device).float())
-    confs = torch.transpose(confi_matrixs,1,2)[torch.transpose(confidence_mat_21_21.unsqueeze(0).repeat(batch_size,1,1).to(torch.uint8),1,2)]
+    confs = torch.transpose(confi_matrixs,1,2)[torch.transpose(confidence_mat_21_21.unsqueeze(0).repeat(batch_size,1,1).to(torch.bool),1,2)]
     confs = confs.view(-1,20)#[b,20]
     
     bone_direction_loss = torch.mean(torch.sum((bone_vec_nm-bone_vec_open_nm)**2,1).mul(confs))

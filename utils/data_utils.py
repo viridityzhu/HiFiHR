@@ -24,7 +24,6 @@ class ConcatDataloader:
             dataset = loader._dataset
         dat_name = dataset.pose_dataset.name
         batch["dataset"] = dat_name
-        print(dat_name)
         if dat_name == "stereohands" or dat_name == "zimsynth":
             batch["root"] = "palm"
         else:

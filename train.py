@@ -55,9 +55,7 @@ def TrainVal(mode_train, dat_name, epoch, train_loader, model, optimizer, requir
             loss_used = args.losses_frei
         else:
             loss_used = args.losses
-
             
-        print(f'loss used: {loss_used}')
 
         # Compute loss function
         loss_dic = loss_func(examples,outputs, loss_used,dat_name,args)
@@ -277,7 +275,7 @@ if __name__ == '__main__':
     
 
     if args.is_write_tb:
-        writer = SummaryWriter(log_dir=os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+args.writer_topic+datetime.now().strftime("%Y%m%d-%H%M%S"))
+        writer = SummaryWriter(log_dir=os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), args.writer_topic+datetime.now().strftime("%Y%m%d-%H%M%S")))
         print(datetime.now().strftime("%Y%m%d-%H%M%S"))
     else:
         writer = None
