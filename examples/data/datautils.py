@@ -15,12 +15,16 @@ class ConcatDataloader:
         loader_idx = next(self.idx_cycle)
         loader = self.iters[loader_idx]
         batch = next(loader)
-        if isinstance(loader.dataset, Subset):
-            dataset = loader.dataset.dataset
+        if isinstance(loader._dataset, Subset):
+            #  '_MultiProcessingDataLoaderIter' object has no attribute 'dataset'
+            # The above error occurs when I test on Freihand evaluation set. So I assume it is because the pytorch version. I modified dataset to _dataset.
+
+            dataset = loader._dataset.dataset
         else:
-            dataset = loader.dataset
+            dataset = loader._dataset
         dat_name = dataset.pose_dataset.name
         batch["dataset"] = dat_name
+        print(dat_name)
         if dat_name == "stereohands" or dat_name == "zimsynth":
             batch["root"] = "palm"
         else:

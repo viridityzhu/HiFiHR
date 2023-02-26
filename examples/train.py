@@ -47,8 +47,6 @@ def TrainVal(mode_train, dat_name, epoch, train_loader, model, optimizer, requir
         # Projection transfer, project to 2D
         outputs, xyz_pred_list, verts_pred_list = trans_proj(outputs, examples['Ks'], dat_name, xyz_pred_list, verts_pred_list)
         #import pdb; pdb.set_trace()
-        # Compute loss function
-        loss_dic = loss_func(examples,outputs,dat_name,args)
         
         # Compute and backward loss
         loss = torch.zeros(1).float().to(device)
@@ -59,6 +57,12 @@ def TrainVal(mode_train, dat_name, epoch, train_loader, model, optimizer, requir
             loss_used = args.losses_frei
         else:
             loss_used = args.losses
+
+            
+        print(f'loss used: {loss_used}')
+
+        # Compute loss function
+        loss_dic = loss_func(examples,outputs, loss_used,dat_name,args)
         for loss_key in loss_used:
             if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
                 loss += loss_dic[loss_key].to(device)

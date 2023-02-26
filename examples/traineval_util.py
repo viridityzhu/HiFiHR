@@ -251,10 +251,10 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
     #import pdb; pdb.set_trace()
     return example_torch
         
-def loss_func(examples, outputs, dat_name, args):
+def loss_func(examples, outputs, loss_used, dat_name, args):
     loss_dic = {}
     # heatmap loss
-    if 'hm_integral' in args.losses and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('hm_j2d_list' in outputs):
+    if 'hm_integral' in loss_used and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('hm_j2d_list' in outputs):
         hm_j2d_list = outputs['hm_j2d_list']
         hm_integral_loss = torch.zeros(1).to(hm_j2d_list[-1].device)
         for hm_j2d in hm_j2d_list:
@@ -266,7 +266,7 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic['hm_integral'] = torch.zeros(1)
     #import pdb; pdb.set_trace()
     
-    if 'hm_integral_gt' in args.losses and ('j2d_gt' in examples) and ('hm_j2d_list' in outputs):
+    if 'hm_integral_gt' in loss_used and ('j2d_gt' in examples) and ('hm_j2d_list' in outputs):
         hm_j2d_list = outputs['hm_j2d_list']
         hm_integral_loss = torch.zeros(1).to(hm_j2d_list[-1].device)
         for hm_j2d in hm_j2d_list:
@@ -292,7 +292,7 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic['joint_2d'] = torch.zeros(1)
 
     # open pose 2d joint loss
-    if 'open_2dj' in args.losses and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('j2d' in outputs):
+    if 'open_2dj' in loss_used and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('j2d' in outputs):
         open_2dj_distance = torch.sqrt(torch.sum((examples['open_2dj']-outputs['j2d'])**2,2))
         open_2dj_distance = torch.where(open_2dj_distance<5, open_2dj_distance**2/10,open_2dj_distance-2.5)
         keypoint_weights = torch.tensor([[2,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5]]).to(open_2dj_distance.device).float()
@@ -305,7 +305,7 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic['open_2dj'] = torch.zeros(1)
     #import pdb; pdb.set_trace()
     # open pose 2d joint loss --- Downgrade Version
-    if "open_2dj_de" in args.losses and ('open_2dj' in examples) and ('j2d' in outputs):
+    if "open_2dj_de" in loss_used and ('open_2dj' in examples) and ('j2d' in outputs):
         open_2dj_loss = torch_f.mse_loss(examples['open_2dj'],outputs['j2d'])
         open_2dj_loss = args.lambda_j2d_de * open_2dj_loss
         loss_dic["open_2dj_de"] = open_2dj_loss
@@ -326,14 +326,14 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic["joint_3d_norm"] = torch.zeros(1)
 
     # bone direction loss
-    if 'open_bone_direc' in args.losses and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('j2d' in outputs):
+    if 'open_bone_direc' in loss_used and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('j2d' in outputs):
         open_bone_direc_loss = bone_direction_loss(outputs['j2d'], examples['open_2dj'], examples['open_2dj_con'])
         open_bone_direc_loss = args.lambda_bone_direc * open_bone_direc_loss
         loss_dic['open_bone_direc'] = open_bone_direc_loss
     else:
         loss_dic['open_bone_direc'] = torch.zeros(1)
     
-    if 'bone_direc' in args.losses and ('j2d_gt' in examples) and ('j2d' in outputs):
+    if 'bone_direc' in loss_used and ('j2d_gt' in examples) and ('j2d' in outputs):
         j2d_con = torch.ones_like(examples['j2d_gt'][:,:,0]).unsqueeze(-1)
         bone_direc_loss = bone_direction_loss(outputs['j2d'], examples['j2d_gt'], j2d_con)
         bone_direc_loss = args.lambda_bone_direc * bone_direc_loss
@@ -353,7 +353,7 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic['kp_cons'] = torch.zeros(1)
 
     # mean scale regularization term
-    if 'mscale' in args.losses and ('joints' in outputs):# and "joints" not in examples:
+    if 'mscale' in loss_used and ('joints' in outputs):# and "joints" not in examples:
         out_bone_length = torch.sqrt(torch.sum((outputs['joints'][:,9, :] - outputs['joints'][:,10, :])**2,1))#check
         #import pdb;pdb.set_trace()
         crit = nn.L1Loss()
@@ -364,7 +364,7 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic['mscale'] = torch.zeros(1)
     
     # GT scale loss
-    if 'scale' in args.losses and ('joints' in outputs) and 'scales' in examples:
+    if 'scale' in loss_used and ('joints' in outputs) and 'scales' in examples:
         if dat_name == 'FreiHand':
             cal_scale = torch.sqrt(torch.sum((outputs['joints'][:,9]-outputs['joints'][:,10])**2,1))
             scale_loss = torch_f.mse_loss(cal_scale, examples['scales'].to(cal_scale.device))
@@ -382,7 +382,7 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic['tsa_poses'] = torch.zeros(1)
     
     # mesh texture regularization terms
-    if 'mtex' in args.losses and ('textures' in outputs) and ('texture_con' in examples):
+    if 'mtex' in loss_used and ('textures' in outputs) and ('texture_con' in examples):
         textures = outputs['textures']
         std = torch.std(textures.view(textures.shape[0],-1,3),dim=1)#[b,3]
         mean = torch.mean(textures.view(textures.shape[0],-1,3),dim=1)
@@ -445,13 +445,16 @@ def loss_func(examples, outputs, dat_name, args):
         loss_dic['loss_percep'] = torch.zeros(1)
     
     # mesh laplacian loss
-    if 'faces' in outputs and 'vertices' in outputs:
-        triangle_loss_fn = LaplacianLoss(torch.autograd.Variable(outputs['faces'][0]).cpu(),outputs['vertices'][0])
-        triangle_loss = triangle_loss_fn(outputs['vertices'])
-        triangle_loss = args.lambda_laplacian * triangle_loss
-        loss_dic['triangle'] = triangle_loss
-    else:
-        loss_dic['triangle'] = torch.zeros(1)
+    # if 'faces' in outputs and 'vertices' in outputs:
+    #     triangle_loss_fn = LaplacianLoss(torch.autograd.Variable(outputs['faces'][0]).cpu(),outputs['vertices'][0])
+    #     triangle_loss = triangle_loss_fn(outputs['vertices'])
+    #     triangle_loss = args.lambda_laplacian * triangle_loss
+    #     loss_dic['triangle'] = triangle_loss
+    # else:
+    #     loss_dic['triangle'] = torch.zeros(1)
+
+    # temporally remove laplacian loss
+    loss_dic['triangle'] = torch.zeros(1)
 
     # mean shape loss
     if 'shape' in outputs:

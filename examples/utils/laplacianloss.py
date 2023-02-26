@@ -35,7 +35,7 @@ class LaplacianLoss(object):
 
     def __call__(self, verts):
         #self.Lx = self.laplacian(verts)
-        Lx0 = self.laplacian(verts)
+        Lx0 = self.laplacian.apply(verts) # update pytorch version
         # Reshape to BV x 3
         #Lx = self.Lx.view(-1, self.Lx.size(2))
         '''
