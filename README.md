@@ -1,4 +1,5 @@
 # 3D hand reconstruction from a single image
+[![wakatime](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/ef5d8f38-163d-408b-8d57-ee7291b33fbf.svg)](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/ef5d8f38-163d-408b-8d57-ee7291b33fbf)
 
 This code is based on [S<sup>2</sup>HAND](https://github.com/TerenceCYJ/S2HAND).
 
@@ -28,6 +29,11 @@ rm -r neural_renderer
 Note that we modified the ```neural_renderer/lighting.py``` compared to [daniilidis-group/neural_renderer](https://github.com/daniilidis-group/neural_renderer).
 
 Note that under pytorch1.6, the neural_renderer may need to be modified before installation: https://github.com/facebookresearch/phosa/issues/6
+
+For NIMBLE model, 
+```sh
+conda install pytorch3d trimesh rtree
+```
 
 ### Data
 For example, for 3D hand reconstruction task on the FreiHAND dataset:
