@@ -1,5 +1,3 @@
-from options import train_options
-from utils.train_utils import *
 import logging
 import os
 import models_new as models
@@ -7,9 +5,14 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as torch_f
+
+from options import train_options
+from losses import loss_func
 from data.dataset import get_dataset
-from utils.data_utils import ConcatDataloader
-from utils.traineval_util import data_dic, loss_func, save_2d_result,save_2d, mano_fitting, trans_proj, visualize, save_model, write_to_tb, dump
+
+from utils.train_utils import *
+from utils.concat_dataloader import ConcatDataloader
+from utils.traineval_util import data_dic, save_2d_result,save_2d, mano_fitting, trans_proj, visualize, write_to_tb
 from utils.fh_utils import AverageMeter,EvalUtil
 
 

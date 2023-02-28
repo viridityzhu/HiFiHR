@@ -380,28 +380,20 @@ class Model(nn.Module):
             output['render'] = self.renderer_NR
 
             # Perceptual calculation
-            if 'percep_feat' in requires and re_img is not None:
+            # if 'percep_feat' in requires and re_img is not None:
                 # only use foreground part
                 
-                #perc_loss = self.perc_crit(torch.mul(images,re_sil.detach().unsqueeze(1)),re_img)
-                #perc_features = self.perc_crit.extract_features(torch.mul(images,re_sil.detach().unsqueeze(1)),re_img)
-                #in_percep, in_percep_low = self.percep_encoder(torch.mul(images,re_sil.detach().unsqueeze(1)))
-                #out_percep, out_percep_low = self.percep_encoder(re_img)
-                #perc_features = self.perc_crit(images,re_img)
-                perc_loss = self.perc_crit(images,re_img)
-                # [a for a in self.perc_crit.model.model1_0.parameters()][0][0]
-                '''
-                iii = 0
-                for name,parameters in self.percep_encoder.named_parameters():
-                    if iii == 0:
-                        print(name,':',parameters.size())
-                        print(parameters[0])
-                    iii += 1
-                '''
-                #output['in_percep'] = in_percep
-                #output['out_percep'] = out_percep
-                output['perc_loss'] = perc_loss
-                #output['perc_features'] = perc_features
+                ##perc_loss = self.perc_crit(torch.mul(images,re_sil.detach().unsqueeze(1)),re_img)
+                ##perc_features = self.perc_crit.extract_features(torch.mul(images,re_sil.detach().unsqueeze(1)),re_img)
+                ##in_percep, in_percep_low = self.percep_encoder(torch.mul(images,re_sil.detach().unsqueeze(1)))
+                ##out_percep, out_percep_low = self.percep_encoder(re_img)
+                ##perc_features = self.perc_crit(images,re_img)
+                # perc_loss = self.perc_crit(images,re_img)
+                ## [a for a in self.perc_crit.model.model1_0.parameters()][0][0]
+                ##output['in_percep'] = in_percep
+                ##output['out_percep'] = out_percep
+                #output['perc_loss'] = perc_loss
+                ##output['perc_features'] = perc_features
             # Network stacked
             if 'stacked' in requires:
                 

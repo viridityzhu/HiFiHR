@@ -1,5 +1,6 @@
 import torch
 import json
+import os
 import utils.visualize_util as visualize_util
 import time
 from tensorboardX import SummaryWriter
@@ -76,6 +77,67 @@ def load_model(model, args):
         print('loading the rgb2hm model from:', args.pretrain_rgb2hm)
     #import pdb; pdb.set_trace()
     return model, current_epoch
+
+
+def save_model(model,optimizer,epoch,current_epoch, args):
+    state = {
+        'args': args,
+        'optimizer': optimizer.state_dict(),
+        'epoch': epoch + current_epoch,
+        #'core': model.core.state_dict(),
+    }
+    if args.task == 'segm_train':
+        state['seghandnet'] = model.module.seghandnet.state_dict()
+        save_file = os.path.join(args.state_output, 'seghandnet_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        print("Save model at:", save_file)
+        torch.save(state, save_file)
+    elif args.task == 'train':
+        if hasattr(model.module,'encoder'):
+            state['encoder'] = model.module.encoder.state_dict()
+        if hasattr(model.module,'hand_decoder'):
+            state['decoder'] = model.module.hand_decoder.state_dict()
+        if hasattr(model.module,'heatmap_attention'):
+            state['heatmap_attention'] = model.module.heatmap_attention.state_dict()
+        if hasattr(model.module,'rgb2hm'):
+            state['rgb2hm'] = model.module.rgb2hm.state_dict()
+        if hasattr(model.module,'hm2hand'):
+            state['hm2hand'] = model.module.hm2hand.state_dict()
+        if hasattr(model.module,'mesh2pose'):
+            state['mesh2pose'] = model.module.mesh2pose.state_dict()
+
+        if hasattr(model.module,'percep_encoder'):
+            state['percep_encoder'] = model.module.percep_encoder.state_dict()
+        
+        if hasattr(model.module,'texture_light_from_low'):
+            state['texture_light_from_low'] = model.module.texture_light_from_low.state_dict()
+
+        if 'textures' in args.train_requires:
+            if hasattr(model.module,'renderer'):
+                state['renderer'] = model.module.renderer.state_dict()
+            if hasattr(model.module,'texture_estimator'):
+                state['texture_estimator'] = model.module.texture_estimator.state_dict()
+            if hasattr(model.module,'pca_texture_estimator'):
+                state['pca_texture_estimator'] = model.module.pca_texture_estimator.state_dict()
+        if 'lights' in args.train_requires:
+            if hasattr(model.module,'light_estimator'):
+                state['light_estimator'] = model.module.light_estimator.state_dict()
+                print("save light estimator")
+        save_file = os.path.join(args.state_output, 'texturehand_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        print("Save model at:", save_file)
+        torch.save(state, save_file)
+    elif args.task == 'hm_train':
+        state['rgb2hm'] = model.module.rgb2hm.state_dict()
+        save_file = os.path.join(args.state_output, 'handhm_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        print("Save model at:", save_file)
+        torch.save(state, save_file)
+    elif args.task == '2Dto3D':
+        state['pose_lift_net'] = model.module.pose_lift_net.state_dict()
+        save_file = os.path.join(args.state_output, 'pose_lift_net_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        print("Save model at:", save_file)
+        torch.save(state, save_file)
+
+    return
+
 
 def freeze_model_modules(model, args):
     if args.freeze_hm_estimator and hasattr(model.module,'rgb2hm'):

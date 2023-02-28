@@ -2,7 +2,7 @@
     "train_datasets":["FreiHand"],
     "val_datasets":["FreiHand"],
     "freihand_base_path": "/storage_fast/jyzhu/HandRecon/freihand",
-    "base_out_path": "/storage_fast/jyzhu/HandRecon/outputs/freihand/SSL-e2e",
+    "base_out_path": "/storage_fast/jyzhu/HandRecon/outputs/freihand/SSL-e2e_2",
     "is_write_tb": true,
     "writer_topic": "runs/freihand/SSL-e2e/", 
     "total_epochs": 180,
@@ -17,6 +17,8 @@
     "num_workers":8,
 
     "freeze_hm_estimator": false,
+
+    "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/SSL-e2e_no_3d_loss/model/texturehand_10.t7",
 
     "train_queries": ["trans_images","trans_Ks","trans_open_2dj"],
     "val_queries": ["images","Ks"],
