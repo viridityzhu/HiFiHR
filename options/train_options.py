@@ -56,8 +56,10 @@ def get_parser():
     parser.add_argument('--val_datasets', type=list, default=['FreiHand'],
                         help='validation dataset to load')
     parser.add_argument('--is_val', type=bool, default=False)
+    parser.add_argument('--if_test', type=bool, default=True, help="a trick to skip testing during experiments.")
     parser.add_argument('--val_interval', type=int, default=1)
     parser.add_argument('--save_interval', type=int, default=1)
+    parser.add_argument('--save_mode', type=str, default='separately',help='1. "only_latest": only save the latest model. or 2. "separately": save models with different epochs.')             
     
 
     # parser.add_argument('--use_pose_regressor', type=bool, default=False)

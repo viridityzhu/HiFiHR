@@ -93,7 +93,6 @@ def get_dataset(
         sides = sides,
         #directory=None,
         is_train=train,
-        #queries=queries,
         #set_name=None,
     )
     
@@ -221,7 +220,6 @@ class HandDataset(Dataset):
                 sample['CRFmasks']=torch.round(func_transforms.to_tensor(CRFmask))#CRFmask
             # augmentated results
             if self.train:
-                #import pdb;pdb.set_trace()
                 if 'trans_images' in query:
                     center = np.asarray([112, 112])
                     scale = 224
@@ -269,7 +267,6 @@ class HandDataset(Dataset):
                         mask, affinetrans, [224, 224]
                     )
                     sample['trans_masks']=torch.round(func_transforms.to_tensor(trans_masks))
-                #check
                 if 'trans_joints' in query:
                     trans_joint = rot_mat.dot(
                         joint.transpose(1, 0)

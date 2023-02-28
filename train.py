@@ -250,13 +250,15 @@ def main(base_path, set_name=None, writer = None):
             
             # save parameters
             if (epoch + current_epoch) % args.save_interval == 0:
-                # test
-                mode_train = False
-                requires = args.test_requires
-                args.train_batch = args.val_batch
-                print('For test part:')
-                TrainVal(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
-                torch.cuda.empty_cache()
+                if args.if_test:
+                    # test
+                    mode_train = False
+                    requires = args.test_requires
+                    args.train_batch = args.val_batch
+                    print('For test part:')
+                    TrainVal(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
+                    torch.cuda.empty_cache()
+
                 save_model(model,optimizer,epoch,current_epoch, args)
             scheduler.step()
     elif 'evaluation' in set_name:#set_name == 'evaluation':

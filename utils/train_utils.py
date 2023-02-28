@@ -86,9 +86,14 @@ def save_model(model,optimizer,epoch,current_epoch, args):
         'epoch': epoch + current_epoch,
         #'core': model.core.state_dict(),
     }
+    if args.save_mode == 'separately':
+        postfix = epoch + current_epoch
+    elif args.save_mode == 'only_latest':
+        postfix = 'latest'
+        
     if args.task == 'segm_train':
         state['seghandnet'] = model.module.seghandnet.state_dict()
-        save_file = os.path.join(args.state_output, 'seghandnet_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        save_file = os.path.join(args.state_output, f'seghandnet_{postfix}.t7')
         print("Save model at:", save_file)
         torch.save(state, save_file)
     elif args.task == 'train':
@@ -122,17 +127,17 @@ def save_model(model,optimizer,epoch,current_epoch, args):
             if hasattr(model.module,'light_estimator'):
                 state['light_estimator'] = model.module.light_estimator.state_dict()
                 print("save light estimator")
-        save_file = os.path.join(args.state_output, 'texturehand_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        save_file = os.path.join(args.state_output, f'texturehand_{postfix}.t7')
         print("Save model at:", save_file)
         torch.save(state, save_file)
     elif args.task == 'hm_train':
         state['rgb2hm'] = model.module.rgb2hm.state_dict()
-        save_file = os.path.join(args.state_output, 'handhm_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        save_file = os.path.join(args.state_output, f'handhm_{postfix}.t7')
         print("Save model at:", save_file)
         torch.save(state, save_file)
     elif args.task == '2Dto3D':
         state['pose_lift_net'] = model.module.pose_lift_net.state_dict()
-        save_file = os.path.join(args.state_output, 'pose_lift_net_{epoch}.t7'.format(epoch=epoch + current_epoch))
+        save_file = os.path.join(args.state_output, f'pose_lift_net_{postfix}.t7')
         print("Save model at:", save_file)
         torch.save(state, save_file)
 

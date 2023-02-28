@@ -10,16 +10,16 @@
     "lr_steps": [30, 60, 90, 120, 150],
     "lr_gamma": 0.5,
     "save_interval": 10,
-    "save_2d": false,
-    "if_test": false,
     "controlled_exp": false,
     "controlled_size": 1000,
     "train_batch":32,
     "val_batch":8,
     "num_workers":8,
+    "if_test": false,
+    "save_2d": false,
+    "save_mode": "only_latest",
 
     "freeze_hm_estimator": false,
-    "lambda_j2d": 0.008,
 
     "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/SSL-e2e_no_3d_loss/model/texturehand_10.t7",
 
