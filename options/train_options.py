@@ -40,7 +40,7 @@ def get_parser():
                         help='SoftRas,NR,opendr')
     parser.add_argument('--texture_mode', type=str, default='surf',help='pca, surf, same, nn_same, vert, html')             
     parser.add_argument('--use_mean_shape', type=bool, default=True)#check
-    parser.add_argument('--use_2d_as_attention', type=bool, default=False)
+    # parser.add_argument('--use_2d_as_attention', type=bool, default=False)
     #parser.add_argument('--losses', type=list, default=['tex','mtex'])
     parser.add_argument('--losses', type=list, default=['mscale'])
     parser.add_argument('--losses_frei', type=list, default=[])
@@ -60,7 +60,7 @@ def get_parser():
     parser.add_argument('--save_interval', type=int, default=1)
     
 
-    parser.add_argument('--use_pose_regressor', type=bool, default=False)
+    # parser.add_argument('--use_pose_regressor', type=bool, default=False)
 
     parser.add_argument('--use_discriminator', type=bool, default=False)
 

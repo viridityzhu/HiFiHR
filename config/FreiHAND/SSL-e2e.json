@@ -4,7 +4,7 @@
     "freihand_base_path": "/storage_fast/jyzhu/HandRecon/freihand",
     "base_out_path": "/storage_fast/jyzhu/HandRecon/outputs/freihand/SSL-e2e",
     "is_write_tb": true,
-    "writer_topic": "/runs/freihand/SSL-e2e/", 
+    "writer_topic": "runs/freihand/SSL-e2e/", 
     "total_epochs": 180,
     "init_lr": 0.001,
     "lr_steps": [30, 60, 90, 120, 150],
@@ -14,14 +14,15 @@
     "controlled_size": 1000,
     "train_batch":32,
     "val_batch":8,
-    "num_workers":4,
+    "num_workers":6,
 
     "freeze_hm_estimator": false,
 
     "train_queries": ["trans_images","trans_Ks","trans_open_2dj"],
     "val_queries": ["images","Ks"],
-    "losses": ["tsa_poses","open_2dj","mscale","open_bone_direc","hm_integral","kp_cons","triangle","mshape","texture","mtex","mrgb"],
-
+    "losses": ["tsa_poses","open_2dj", "mscale", "open_bone_direc",
+                "hm_integral", "kp_cons", "triangle", "mshape",
+                "texture", "mtex", "mrgb"], 
     "train_requires": ["heatmaps","joints", "verts","textures","lights"],
     "test_requires": ["heatmaps","joints", "verts","textures","lights"],
     "task": "train",

@@ -83,6 +83,10 @@ class RGB2HM(nn.Module):
 
 # FreiHand Decoder
 class MyHandDecoder(nn.Module):
+    '''
+        Estimates:
+            joints, verts, faces, theta, beta, scale, trans, rot, tsa_poses
+    '''
     def __init__(self,inp_neurons=1536,use_mean_shape=False):
         super(MyHandDecoder, self).__init__()
         self.hand_decode = MyPoseHand(inp_neurons=inp_neurons,use_mean_shape = use_mean_shape)
@@ -192,13 +196,13 @@ class Model(nn.Module):
         if "joints" in args.train_requires or "verts" in args.train_requires or "joints" in args.test_requires or "verts" in args.test_requires:
             self.regress_mode = args.regress_mode#options: 'mano' 'hm2mano'
             self.use_mean_shape = args.use_mean_shape
-            self.use_2d_as_attention = args.use_2d_as_attention
+            # self.use_2d_as_attention = args.use_2d_as_attention
             if self.regress_mode == 'mano':# efficient-b3
                 self.encoder = Encoder()
                 self.dim_in = 1536
                 self.hand_decoder = MyHandDecoder(inp_neurons=self.dim_in, use_mean_shape = self.use_mean_shape)
-                if self.use_2d_as_attention:
-                    self.heatmap_attention = heatmap_attention(out_len=self.dim_in)
+                # if self.use_2d_as_attention:
+                #     self.heatmap_attention = heatmap_attention(out_len=self.dim_in)
 
             self.render_choice = args.renderer_mode
             self.texture_choice = args.texture_mode
@@ -224,18 +228,18 @@ class Model(nn.Module):
                 self.texture_light_from_low = texture_light_estimator(mode='surf')
                 #[print(aa.requires_grad) for aa in self.encoder.parameters()]
             # Pose adapter
-            self.use_pose_regressor = args.use_pose_regressor
+            # self.use_pose_regressor = args.use_pose_regressor
             if (args.train_datasets)[0] == 'FreiHand':
                 self.get_gt_depth = True
                 self.dataset = 'FreiHand'
-            elif (args.train_datasets)[0] == 'RHD':
-                self.get_gt_depth = False
-                self.dataset = 'RHD'
-                if self.use_pose_regressor:
-                    self.mesh2pose = mesh2poseNet()
-            elif (args.train_datasets)[0] == 'Obman':
-                self.get_gt_depth = False
-                self.dataset = 'Obman'
+            # elif (args.train_datasets)[0] == 'RHD':
+            #     self.get_gt_depth = False
+            #     self.dataset = 'RHD'
+            #     if self.use_pose_regressor: # by default false
+            #         self.mesh2pose = mesh2poseNet()
+            # elif (args.train_datasets)[0] == 'Obman':
+            #     self.get_gt_depth = False
+            #     self.dataset = 'Obman'
             elif (args.train_datasets)[0] == 'HO3D':
                 self.get_gt_depth = True
                 self.dataset = 'HO3D'
@@ -247,6 +251,21 @@ class Model(nn.Module):
             self.regress_mode = None
         #np.sum([p.numel() for p in model.parameters()]).item()
     def predict_singleview(self, images, mask_images, Ks, task, requires, gt_verts, bgimgs):
+        '''
+            return: an output dict including:
+            - 2D keypoints
+                - hm_list: heatmap, [b, 21, 64, 64]
+                - hm_pose_uv_list: 21 keypoints with confidences. [b, 21, 3]. 21 keypoints, then 2 for uv locations + 1 for confidence
+                - hm_j2d_list: j_2d, only contains 21 keypoints' locations (the first two dims)
+            - 3D
+                - theta (pose), beta (shape), scale, trans, rot estimations
+                - joints, verts, faces, tsa_poses from MANO
+                - textures, lights estimations
+                - face_textures, re_sil, re_img, re_depth [, gt_depth] after rendering
+                - render: renderer itself
+            - Others
+                - perc_loss: perception loss between img and re_img, optional
+        '''
         vertices, faces, joints, shape, pose, trans, segm_out, textures, lights = None, None, None, None, None, None, None, None, None
         re_images, re_sil, re_img, re_depth, gt_depth = None, None, None, None, None
         pca_text, face_textures = None, None
@@ -270,38 +289,35 @@ class Model(nn.Module):
             
             output['hm_list'] = est_hm_list
             #output['hm_pose_uv'] = est_pose_uv#[b,21,3]
-            output['hm_pose_uv_list'] = est_pose_uv_list
+            output['hm_pose_uv_list'] = est_pose_uv_list # [b, 21, 3]. 21 keypoints, then 2 for uv locations + 1 for confidence
             output['hm_j2d_list'] = [hm_pose_uv[:,:,:2] for hm_pose_uv in est_pose_uv_list]
         if task == 'hm_train': 
             #return est_pose_uv, est_hm_list
             return output
         else:
-            if self.regress_mode == 'hm2mano':
-                # 2. Hand shape and pose estimate
-                joints, vertices, faces, pose, shape, features = self.hm2hand(est_hm_list, encoding)
+            # 2. Hand shape and pose estimate
+
+            # I think the hm2mano is too naive and is already deleted.
+            # if self.regress_mode == 'hm2mano':
+                # joints, vertices, faces, pose, shape, features = self.hm2hand(est_hm_list, encoding)
                 # joints: [b,21,3]; vertices: [b,778,3]; faces: [b,1538,3]; 
                 # pose: [b,6]; shape: [b,10]; features: [b,4096]; 
-            elif self.regress_mode == 'mano' or self.regress_mode == 'mano1':
-                features, low_features = self.encoder(images)#[b,1536]
-                
-                if self.use_2d_as_attention:
-                    attention_2d = self.heatmap_attention(encoding[-1])
-                    features = torch.mul(features, attention_2d)
-                if 'joints' in requires or 'verts' in requires:
-                    #joints, vertices, faces, pose, shape = self.hand_decoder(features)
-                    joints, vertices, faces, pose, shape, scale, trans, rot, tsa_poses  = self.hand_decoder(features)
-                    if self.dataset == 'RHD' and self.use_pose_regressor:
-                        joints_res = self.mesh2pose(vertices)
-                        joints = joints + joints_res
+            # elif self.regress_mode == 'mano' or self.regress_mode == 'mano1':
+            features, low_features = self.encoder(images)#[b,1536]
+            
+            # if self.use_2d_as_attention: # by default false. I don't think it is really used.
+            #     attention_2d = self.heatmap_attention(encoding[-1])
+            #     features = torch.mul(features, attention_2d)
+            if 'joints' in requires or 'verts' in requires:
+                #joints, vertices, faces, pose, shape = self.hand_decoder(features)
+                joints, vertices, faces, pose, shape, scale, trans, rot, tsa_poses  = self.hand_decoder(features)
+                # if self.dataset == 'RHD' and self.use_pose_regressor:
+                #     joints_res = self.mesh2pose(vertices)
+                #     joints = joints + joints_res
             #print(time.time() - end)
             #print('Time {batch_time.val:.0f}\t'.format(batch_time))   
-            output['joints'] = joints
-            output['vertices'] = vertices
-            output['pose'] = pose
-            output['shape'] = shape
-            output['scale'] = scale
-            output['trans'] = trans
-            output['rot'] = rot
+            output['joints'], output['vertices'] = joints, vertices
+            output['pose'], output['shape'], output['scale'], output['trans'], output['rot'] = pose, shape, scale, trans, rot
             output['tsa_poses'] = tsa_poses
             
             # 3. Texture & Lighting Estimation
@@ -362,7 +378,7 @@ class Model(nn.Module):
                 output['maskRGBs'] = images.mul((re_sil>0).float().unsqueeze(1).repeat(1,3,1,1))
             output['face_textures'] = face_textures
             output['render'] = self.renderer_NR
-            #output[''] = 
+
             # Perceptual calculation
             if 'percep_feat' in requires and re_img is not None:
                 # only use foreground part
@@ -471,6 +487,7 @@ class Model(nn.Module):
                 return vertices, faces, joints, shape, pose, trans, segm_out, re_sil, re_img, re_depth, gt_depth, textures, pca_text, tsa_poses#, scale, rot
             '''
             return output
+    #  only used in self-supervised learning: def forward(self, images=None, P=None, task='train', requires=['joints']):
     def forward(self, images=None, mask_images = None, viewpoints=None, P=None, voxels=None, mano_para = None, task='train', requires=['joints'], gt_verts=None, gt_2d_joints=None, bgimgs=None):
         if task == 'train' or task == 'hm_train':
             return self.predict_singleview(images, mask_images, P, task, requires, gt_verts, bgimgs)

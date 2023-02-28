@@ -13,7 +13,7 @@ from utils.fh_utils import Mano2Frei, RHD2Frei, HO3D2Frei, Frei2HO3D, AverageMet
 from utils.visualize_util import draw_2d_error_curve
 import utils.visualize_util as visualize_util
 import utils.pytorch_ssim as pytorch_ssim
-from utils.laplacianloss import LaplacianLoss
+from utils.laplacianloss import LaplacianLoss, calc_laplacian_loss
 from utils.fh_utils import proj_func
 from losses import bone_direction_loss, tsa_pose_loss#image_l1_loss, iou_loss, ChamferLoss,
 
@@ -108,7 +108,7 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             if args.semi_ratio is not None and 'j2d_gt' in example_torch and 'open_2dj' in example_torch:
                 raw_idx = example_torch['idxs']%32560
                 mix_open_2dj = torch.where((raw_idx<32560*args.semi_ratio).view(-1,1,1),example_torch['j2d_gt'],example_torch['open_2dj'])
-                mix_open_2dj_con = torch.where((raw_idx<32560*args.semi_ratio).view(-1,1,1),torch.ones_like(example_torch['open_2dj_con']).to(example_torch['open_2dj_con'].device),example_torch['open_2dj_con'])
+                mix_open_2dj_con = torch.where((raw_idx<32560*args.semi_ratio).view(-1,1,1),torch.ones_like(example_torch['open_2dj_con']).to(device),example_torch['open_2dj_con'])
                 example_torch['open_2dj'] = mix_open_2dj
                 example_torch['open_2dj_con'] = mix_open_2dj_con
                 
@@ -143,7 +143,7 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             trans_image = image_center - crop_center
             scale = (Ks_raw[:,0,0]+Ks_raw[:,1,1])/2 torch.mean(joints,1)[:,2]
             trans_xy = trans_image.cuda()*torch.mean(joints,1)[:,2].unsqueeze(-1)*torch.reciprocal((Ks_raw[:,0,0]+Ks_raw[:,1,1])/2).unsqueeze(-1)
-            joints_trans = joints + torch.cat((trans_xy, torch.zeros([trans_xy.shape[0],1]).to(trans_xy.device)),1).unsqueeze(1)
+            joints_trans = joints + torch.cat((trans_xy, torch.zeros([trans_xy.shape[0],1]).to(device)),1).unsqueeze(1)
             proj_func(joints_trans, Ks_raw)
             #example_torch['j2d_gt'] = j2d_gt
             '''
@@ -246,10 +246,11 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
         
 def loss_func(examples, outputs, loss_used, dat_name, args):
     loss_dic = {}
+    device = examples['imgs'].device
     # heatmap loss
     if 'hm_integral' in loss_used and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('hm_j2d_list' in outputs):
         hm_j2d_list = outputs['hm_j2d_list']
-        hm_integral_loss = torch.zeros(1).to(hm_j2d_list[-1].device)
+        hm_integral_loss = torch.zeros(1).to(device)
         for hm_j2d in hm_j2d_list:
             hm_2dj_distance = torch.sqrt(torch.sum((examples['open_2dj']-hm_j2d)**2,2))#[b,21]
             open_2dj_con_hm = examples['open_2dj_con'].squeeze(2)
@@ -260,7 +261,7 @@ def loss_func(examples, outputs, loss_used, dat_name, args):
     
     if 'hm_integral_gt' in loss_used and ('j2d_gt' in examples) and ('hm_j2d_list' in outputs):
         hm_j2d_list = outputs['hm_j2d_list']
-        hm_integral_loss = torch.zeros(1).to(hm_j2d_list[-1].device)
+        hm_integral_loss = torch.zeros(1).to(device)
         for hm_j2d in hm_j2d_list:
             hm_2dj_distance0 = torch.sqrt(torch.sum((examples['j2d_gt']-hm_j2d)**2,2))#[b,21]
             open_2dj_con_hm0 = torch.ones_like(hm_2dj_distance0)
@@ -286,7 +287,7 @@ def loss_func(examples, outputs, loss_used, dat_name, args):
     if 'open_2dj' in loss_used and ('open_2dj' in examples) and ('open_2dj_con' in examples) and ('j2d' in outputs):
         open_2dj_distance = torch.sqrt(torch.sum((examples['open_2dj']-outputs['j2d'])**2,2))
         open_2dj_distance = torch.where(open_2dj_distance<5, open_2dj_distance**2/10,open_2dj_distance-2.5)
-        keypoint_weights = torch.tensor([[2,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5]]).to(open_2dj_distance.device).float()
+        keypoint_weights = torch.tensor([[2,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5,1,1,1,1.5]]).to(device).float()
         open_2dj_con0 = examples['open_2dj_con'].squeeze(2)
         open_2dj_con0 = open_2dj_con0.mul(keypoint_weights)
         open_2dj_loss = (torch.sum(open_2dj_distance.mul(open_2dj_con0**2))/torch.sum((open_2dj_con0**2)))
@@ -356,7 +357,7 @@ def loss_func(examples, outputs, loss_used, dat_name, args):
     if 'scale' in loss_used and ('joints' in outputs) and 'scales' in examples:
         if dat_name == 'FreiHand':
             cal_scale = torch.sqrt(torch.sum((outputs['joints'][:,9]-outputs['joints'][:,10])**2,1))
-            scale_loss = torch_f.mse_loss(cal_scale, examples['scales'].to(cal_scale.device))
+            scale_loss = torch_f.mse_loss(cal_scale, examples['scales'].to(device))
             scale_loss = args.lambda_scale * scale_loss
             loss_dic['scale'] = scale_loss
     else:
@@ -431,20 +432,19 @@ def loss_func(examples, outputs, loss_used, dat_name, args):
         loss_dic['loss_percep'] = torch.zeros(1)
     
     # mesh laplacian loss
-    # if 'faces' in outputs and 'vertices' in outputs:
-    #     triangle_loss_fn = LaplacianLoss(torch.autograd.Variable(outputs['faces'][0]).cpu(),outputs['vertices'][0])
-    #     triangle_loss = triangle_loss_fn(outputs['vertices'])
-    #     triangle_loss = args.lambda_laplacian * triangle_loss
-    #     loss_dic['triangle'] = triangle_loss
-    # else:
-    #     loss_dic['triangle'] = torch.zeros(1)
+    if 'faces' in outputs and 'vertices' in outputs:
+        # triangle_loss_fn = LaplacianLoss(torch.autograd.Variable(outputs['faces'][0]).cpu(),outputs['vertices'][0])
+        # why [0]???
+        # triangle_loss = triangle_loss_fn(outputs['vertices'])
+        triangle_loss = calc_laplacian_loss(outputs['faces'], outputs['vertices'])
+        triangle_loss = args.lambda_laplacian * triangle_loss
+        loss_dic['triangle'] = triangle_loss
+    else:
+        loss_dic['triangle'] = torch.zeros(1)
 
-    # temporally remove laplacian loss
-    loss_dic['triangle'] = torch.zeros(1)
-
-    # mean shape loss
+    # mean shape loss: make shape towards 0???
     if 'shape' in outputs:
-        shape_loss = torch_f.mse_loss(outputs['shape'], torch.zeros_like(outputs['shape']).to(outputs['shape'].device))
+        shape_loss = torch_f.mse_loss(outputs['shape'], torch.zeros_like(outputs['shape']).to(device))
         shape_loss = args.lambda_shape * shape_loss
         loss_dic['mshape'] = shape_loss
     else:
@@ -471,37 +471,36 @@ def orthographic_proj_withz(X, trans, scale, offset_z=0.):
 
 
 
-def trans_proj(outputs, Ks_this, dat_name, xyz_pred_list, verts_pred_list, is_ortho=False):
-    #xyz_pred_list, verts_pred_list = list(), list()
-    if 'joints' in outputs:
-        if dat_name == 'FreiHand':
-            output_joints = Mano2Frei(outputs['joints'])
-            outputs['joints'] = output_joints
-        elif dat_name == 'RHD':
-            output_joints = Mano2Frei(outputs['joints'])
-            outputs['joints'] = output_joints
-        elif dat_name == 'HO3D':
-            output_joints = Mano2Frei(outputs['joints'])
-            outputs['joints'] = output_joints
-        
-        if 'joint_2d' in outputs:
-            outputs['j2d'] = Mano2Frei(outputs['joint_2d'])
-        if 'j2d' not in outputs:
-            if is_ortho:
-                proj_joints = orthographic_proj_withz(outputs['joints'], outputs['trans'], outputs['scale'])
-                outputs['j2d'] = proj_joints[:, :, :2]
-            else:    
-                outputs['j2d'] = proj_func(output_joints, Ks_this)
-        #del output_joints
-        for i in range(outputs['joints'].shape[0]):
-            if dat_name == "FreiHand":
-                xyz_pred_list.append(outputs['joints'][i].cpu().detach().numpy())
-            elif dat_name == "HO3D":
-                output_joints_ho3d = Frei2HO3D(outputs['joints'])
-                output_joints_ho3d = output_joints_ho3d.mul(torch.tensor([1,-1,-1]).view(1,1,-1).float().cuda())
-                xyz_pred_list.append(output_joints_ho3d[i].cpu().detach().numpy())
-            if 'vertices' in outputs:
-                verts_pred_list.append(outputs['vertices'][i].cpu().detach().numpy())
+def trans_proj(outputs, Ks_this, dat_name, is_ortho=False):
+    if dat_name == 'FreiHand':
+        output_joints = Mano2Frei(outputs['joints'])
+        outputs['joints'] = output_joints
+    elif dat_name == 'RHD':
+        output_joints = Mano2Frei(outputs['joints'])
+        outputs['joints'] = output_joints
+    elif dat_name == 'HO3D':
+        output_joints = Mano2Frei(outputs['joints'])
+        outputs['joints'] = output_joints
+    
+    if 'joint_2d' in outputs:
+        outputs['j2d'] = Mano2Frei(outputs['joint_2d'])
+    if 'j2d' not in outputs:
+        if is_ortho:
+            proj_joints = orthographic_proj_withz(outputs['joints'], outputs['trans'], outputs['scale'])
+            outputs['j2d'] = proj_joints[:, :, :2]
+        else:    
+            outputs['j2d'] = proj_func(output_joints, Ks_this)
+
+    xyz_pred_list, verts_pred_list = [], []
+    for i in range(outputs['joints'].shape[0]):
+        if dat_name == "FreiHand":
+            xyz_pred_list.append(outputs['joints'][i].cpu().detach().numpy())
+        elif dat_name == "HO3D":
+            output_joints_ho3d = Frei2HO3D(outputs['joints'])
+            output_joints_ho3d = output_joints_ho3d.mul(torch.tensor([1,-1,-1]).view(1,1,-1).float().cuda())
+            xyz_pred_list.append(output_joints_ho3d[i].cpu().detach().numpy())
+        if 'vertices' in outputs:
+            verts_pred_list.append(outputs['vertices'][i].cpu().detach().numpy())
     
     return outputs, xyz_pred_list, verts_pred_list
 
@@ -562,19 +561,21 @@ def save_2d_result(j2d_pred_ED_list,j2d_proj_ED_list,j2d_detect_ED_list,args,j2d
                     fp.write('\n')
     print("Write 2D Joints Error at:",save_dir)
 
-def save_2d(examples, outputs, epoch, j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args):
+def save_2d(examples, outputs, epoch, args):
     #save_dir = os.path.join(args.base_output_dir,'joint2d_result',str(epoch))
     #os.makedirs(save_dir, exist_ok=True)
-    if 'j2d_gt' in examples and 'hm_j2d_list' in outputs:
-        pred_ED = torch.sqrt(torch.sum((examples['j2d_gt']-outputs['hm_j2d_list'][-1])**2,2))#[8,21]
-        j2d_pred_ED_list += pred_ED.cpu().detach().numpy().tolist()
-    if 'j2d_gt' in examples and 'j2d' in outputs:
-        proj_ED = torch.sqrt(torch.sum((examples['j2d_gt']-outputs['j2d'])**2,2))#[8,21]
-        j2d_proj_ED_list += proj_ED.cpu().detach().numpy().tolist()
-    if 'j2d_gt' in examples and 'open_2dj' in examples:
-        detect_ED = torch.sqrt(torch.sum((examples['j2d_gt']-examples['open_2dj'])**2,2))#[8,21]
-        j2d_detect_ED_list += detect_ED.cpu().detach().numpy().tolist()
-    return j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list
+    j2d_pred_ED, j2d_proj_ED, j2d_detect_ED = None, None, None
+    if 'j2d_gt' in examples:
+        if 'hm_j2d_list' in outputs:
+            pred_ED = torch.sqrt(torch.sum((examples['j2d_gt']-outputs['hm_j2d_list'][-1])**2,2))#[8,21]
+            j2d_pred_ED = pred_ED.cpu().detach().numpy().tolist()
+        if 'j2d' in outputs:
+            proj_ED = torch.sqrt(torch.sum((examples['j2d_gt']-outputs['j2d'])**2,2))#[8,21]
+            j2d_proj_ED = proj_ED.cpu().detach().numpy().tolist()
+        if 'open_2dj' in examples:
+            detect_ED = torch.sqrt(torch.sum((examples['j2d_gt']-examples['open_2dj'])**2,2))#[8,21]
+            j2d_detect_ED = detect_ED.cpu().detach().numpy().tolist()
+    return j2d_pred_ED, j2d_proj_ED, j2d_detect_ED
 
 def save_3d(examples, outputs, j3d_ED_list, j2d_ED_list):
     if 'joints' in examples and 'joints' in outputs:
@@ -689,7 +690,7 @@ def save_model(model,optimizer,epoch,current_epoch, args):
 
 def write_to_tb(mode_train, writer,loss_dic, epoch, lr=None, is_val=False):
     if mode_train:
-        writer.add_scalar('Learning rate', lr, epoch)
+        writer.add_scalar('Learning_rate', lr, epoch)
         for loss_key in loss_dic:
             if loss_dic[loss_key]>0:
                 writer.add_scalar('Train_'+loss_key, loss_dic[loss_key].cpu().detach().numpy(), epoch)
@@ -734,7 +735,7 @@ def mano_fitting(outputs,Ks=None, op_xyz_pred_list=[], op_verts_pred_list=[], da
     mano_opt_params = [mano_shape, mano_pose,mano_trans,mano_scale,mano_rot]
     
     j2d_2dbranch = outputs['hm_j2d_list'][-1].detach().clone()#[b,21,2]
-    j2d_2dbranch_con = torch.ones([j2d_2dbranch.shape[0],j2d_2dbranch.shape[1],1]).to(j2d_2dbranch.device)
+    j2d_2dbranch_con = torch.ones([j2d_2dbranch.shape[0],j2d_2dbranch.shape[1],1]).to(device)
     crit_l1 = nn.L1Loss()
     iter_total = 151
     batch_time = AverageMeter()

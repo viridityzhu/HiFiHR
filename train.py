@@ -39,16 +39,17 @@ def TrainVal(mode_train, dat_name, epoch, train_loader, model, optimizer, requir
         examples = data_dic(sample, dat_name, set_name, args)
         
         device = examples['imgs'].device
-        # Use some algorithm for prediction
+        # Use the network to predict the outputs
         if args.task == 'train' or args.task == 'test' or args.task == 'hm_train':
             outputs = model(images=examples['imgs'], P=examples['Ps'], task=args.task, requires=requires)
         
-        # Projection transfer, project to 2D
-        outputs, xyz_pred_list, verts_pred_list = trans_proj(outputs, examples['Ks'], dat_name, xyz_pred_list, verts_pred_list)
+        # Projection transformation, project to 2D
+        if 'joints' in outputs:
+            outputs, this_xyz_pred_list, this_verts_pred_list = trans_proj(outputs, examples['Ks'], dat_name)
+            xyz_pred_list.extend(this_xyz_pred_list)
+            verts_pred_list.extend(this_verts_pred_list)
         
         # Compute and backward loss
-        loss = torch.zeros(1).float().to(device)
-        
         if dat_name == "RHD" and len(args.losses_rhd)>0:
             loss_used = args.losses_rhd
         elif dat_name == "FreiHand" and len(args.losses_frei)>0:
@@ -56,9 +57,9 @@ def TrainVal(mode_train, dat_name, epoch, train_loader, model, optimizer, requir
         else:
             loss_used = args.losses
             
-
         # Compute loss function
-        loss_dic = loss_func(examples,outputs, loss_used,dat_name,args)
+        loss_dic = loss_func(examples, outputs, loss_used, dat_name, args)
+        loss = torch.zeros(1).float().to(device)
         for loss_key in loss_used:
             if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
                 loss += loss_dic[loss_key].to(device)
@@ -69,25 +70,32 @@ def TrainVal(mode_train, dat_name, epoch, train_loader, model, optimizer, requir
             print('loss is less than 1e-10')
             continue
         
+        op_outputs = None
         if mode_train:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            op_outputs = None
-        else:
-            if args.test_refinement:
-                op_outputs, op_xyz_pred_list, op_verts_pred_list = mano_fitting(outputs,Ks=examples['Ks'], op_xyz_pred_list=op_xyz_pred_list, op_verts_pred_list=op_verts_pred_list,dat_name=dat_name, args=args)
-            else:
-                op_outputs = None
+        elif args.test_refinement:
+            op_outputs, op_xyz_pred_list, op_verts_pred_list = mano_fitting(outputs,
+                                                                            Ks = examples['Ks'],
+                                                                            op_xyz_pred_list = op_xyz_pred_list,
+                                                                            op_verts_pred_list = op_verts_pred_list,
+                                                                            dat_name = dat_name,
+                                                                            args = args)
 
         # save 2D results
         if args.save_2d:
-            j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list = save_2d(examples, outputs, epoch, j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args)
+            # square errors?
+            j2d_pred_ED, j2d_proj_ED, j2d_detect_ED = save_2d(examples, outputs, epoch, args)
+            j2d_pred_ED_list.append(j2d_pred_ED)
+            j2d_proj_ED_list.append(j2d_proj_ED)
+            j2d_detect_ED_list.append(j2d_detect_ED)
 
-        # Save visualization and print informations
+
+        # Save visualization and print information
         batch_time.update(time.time() - end)
-        visualize(mode_train,dat_name,epoch,idx,outputs,examples,args, op_outputs = op_outputs, writer=writer, writer_tag=set_name)
-        # print
+        visualize(mode_train, dat_name, epoch, idx, outputs, examples, args, op_outputs = op_outputs, writer=writer, writer_tag=set_name)
+        # Print information
         if idx % args.print_freq == 0:
             if optimizer is not None:
                 lr_current = optimizer.param_groups[0]['lr']
@@ -101,15 +109,15 @@ def TrainVal(mode_train, dat_name, epoch, train_loader, model, optimizer, requir
                 'lr {lr:.7f}\t'.format(epoch ,idx, len(train_loader),
                                         batch_time=batch_time, loss=loss.data.item(), dataset=dat_name,
                                         lr=lr_current))
-            print("Loss backward:\t",['{0}:{1:6f};'.format(loss_item,loss_data.sum()) for loss_item,loss_data in loss_dic.items() if (loss_item in loss_used and loss_data>1e-10)])
+            print(f"Loss backward:\t{', '.join(['{0}:{1:6f}'.format(loss_item,loss_data.sum()) for loss_item,loss_data in loss_dic.items() if (loss_item in loss_used)])}")
 
             #print("Loss all:\t",['{0}:{1:6f};'.format(loss_item, loss_dic[loss_item].sum().data.item()) for loss_item in loss_dic])
             #print("j3d loss:{0:.4f}; j2d loss:{1:.4f};shape loss:{2:.6f}; pose loss:{3:.6f}; render loss:{4:.6f}; sil loss:{5:.6f}; depth loss:{6:.5f}; render ssim loss:{7:.5f}; depth ssim loss:{8:.5f}; open j2d loss:{9:.5f}; mesh tex std:{10:.10f}; scale loss:{11:.5f}; bone direct loss:{12:.5f}; laplacian loss:{13:.6f}; hm loss:{14:.6f}; kp consistency loss:{15:.6f}; percep loss:{16:.6f}".format(joint_3d_loss.data.item(),joint_2d_loss.data.item(), shape_loss.data.item(),pose_loss.data.item(),texture_loss.data.item(), silhouette_loss.data.item(), depth_loss.data.item(), loss_ssim_tex.data.item(), loss_ssim_depth.data.item(), open_2dj_loss.data.item(), textures_reg.data.item(), mscale_loss.data.item(), open_bone_direc_loss.data.item(),triangle_loss.data.item(),hm_loss.data.item(),kp_cons_loss.data.item(),loss_percep.data.item()))
-
         # write to tensorboard
         if writer is not None:
             with torch.no_grad():
                 write_to_tb(mode_train, writer, loss_dic, epoch, lr=optimizer.param_groups[0]['lr'])
+
     # dump results
     if dat_name == 'FreiHand' or dat_name == 'HO3D':
         if mode_train:
@@ -275,7 +283,9 @@ if __name__ == '__main__':
     
 
     if args.is_write_tb:
-        writer = SummaryWriter(log_dir=os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), args.writer_topic+datetime.now().strftime("%Y%m%d-%H%M%S")))
+        log_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                               args.writer_topic+datetime.now().strftime("%Y%m%d-%H%M%S"))
+        writer = SummaryWriter(log_dir= log_dir)
         print(datetime.now().strftime("%Y%m%d-%H%M%S"))
     else:
         writer = None

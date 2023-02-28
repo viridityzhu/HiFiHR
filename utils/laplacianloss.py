@@ -19,6 +19,36 @@ import torch
 
 import numpy as np
 from scipy import sparse
+from pytorch3d.loss import mesh_laplacian_smoothing
+from pytorch3d.structures import Meshes
+
+def calc_laplacian_loss(faces, vertices):
+    '''
+    Calculate laplacian loss using Pytorch3D.
+
+    Input:
+      V: B x V x 3
+      F: B x F x 3
+
+    Return:
+        loss_laplacian
+    '''
+
+    # # We scale normalize and center the target mesh to fit in a sphere of radius 1 centered at (0,0,0). 
+    # # (scale, center) will be used to bring the predicted mesh to its original center and scale
+    # # Note that normalizing the target mesh, speeds up the optimization but is not necessary!
+    # center = verts.mean(1)
+    # verts = verts - center
+    # scale = max(verts.abs().max(1)[0])
+    # verts = verts / scale
+
+    # We construct a Meshes structure for the target mesh
+    mesh = Meshes(verts=vertices, faces=faces)
+    # mesh laplacian smoothing
+    loss_laplacian = mesh_laplacian_smoothing(mesh, method="uniform")
+    
+    return loss_laplacian
+    
 
 
 class LaplacianLoss(object):
@@ -82,7 +112,6 @@ class Laplacian(torch.autograd.Function):
         # Faces is B x F x 3, cuda torch Variabe.
         # Reuse faces.
         self.F_np = faces.data.numpy()
-        #import pdb; pdb.set_trace()
         self.F = faces.long()#torch.Tensor(faces).long()#.cuda().long()#.cuda().long()
         self.L = None
         self.vertices = vertices
@@ -110,15 +139,12 @@ class Laplacian(torch.autograd.Function):
             # Compute cotangents
             verticess = self.vertices.to(device=V.get_device())
             sphere_batchV = verticess.unsqueeze(0).repeat(V.shape[0], 1, 1)
-            #import pdb; pdb.set_trace()
             #self.F = (self.F).to(device=V.get_device())#？？？？？？？？？？？？？？
-            #import pdb; pdb.set_trace()
             if self.F.dim() == 2:
                 self.F = self.F.unsqueeze(0).repeat(V.shape[0], 1, 1)
             elif self.F.dim() == 3:
                 if self.F.shape[0] != V.shape[0]:
                     self.F = self.F[0].unsqueeze(0).repeat(V.shape[0], 1, 1)
-            #import pdb; pdb.set_trace()
             #self.F = self.F.to(device=sphere_batchV.device)
             C = cotangent(sphere_batchV, self.F)
             

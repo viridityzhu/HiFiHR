@@ -57,7 +57,9 @@ def get_poseweights(poses, bsize):
     return pose_matrix
 
 def rot_pose_beta_to_mesh(rots, poses, betas):
-    #import pdb; pdb.set_trace()
+    '''
+        Using MANO, convert the provided rotation, theta (pose), and beta (shape) into mesh joints, verts, faces, and poses.
+    '''
     #dd = pickle.load(open('examples/data/MANO_RIGHT.pkl', 'rb'),encoding='latin1')
     MANO_file = os.path.join(os.path.dirname(os.path.dirname(__file__)),'data/MANO_RIGHT.pkl')
     dd = pickle.load(open(MANO_file, 'rb'),encoding='latin1')
@@ -78,16 +80,13 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
 
     mesh_face = Variable(torch.from_numpy(np.expand_dims(dd['f'],0).astype(np.int16)).to(device=devices))
     
-    #import pdb; pdb.set_trace()
 
     batch_size = rots.size(0)   
 
     mesh_face = mesh_face.repeat(batch_size, 1, 1)
-    #import pdb; pdb.set_trace()
     poses = (hands_mean + torch.matmul(poses.unsqueeze(1), hands_components).squeeze(1)).view(batch_size,keypoints_num-1,3)
     # [b,15,3] [0:3]index [3:6]mid [6:9]pinky [9:12]ring [12:15]thumb
 
-    #import pdb; pdb.set_trace()
 
     # for visualization
     #rots = torch.zeros_like(rots); rots[:,0]=np.pi/2
@@ -112,7 +111,6 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
          
     pose = poses.permute(1, 0, 2)
     pose_split = torch.split(pose, 1, 0)
-    #import pdb; pdb.set_trace()
 
     angle_matrix =[]
     for i in range(keypoints_num):
@@ -156,7 +154,6 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
    
     #v = v.permute(0,2,1)[:,:,:3] 
     Rots = rodrigues(rots)[0]
-    #import pdb; pdb.set_trace()
     Jtr = []
 
     for j_id in range(len(results_global)):

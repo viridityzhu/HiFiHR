@@ -112,7 +112,6 @@ class MyPoseHand(nn.Module):
         ):
         super(MyPoseHand, self).__init__()
         self.use_mean_shape = use_mean_shape
-        #import pdb;pdb.set_trace()
         # Base layers
         base_layers = []
         base_layers.append(nn.Linear(inp_neurons, 1024))
@@ -166,11 +165,9 @@ class MyPoseHand(nn.Module):
         #self.mean = torch.zeros()
         #self.mean = Variable(torch.FloatTensor([400,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0,.0]).cuda())
     def init_weights(self):
-        #import pdb; pdb.set_trace()
         #len_scale_reg = len(self.scale_reg)
         '''
         for m in self.scale_reg:
-            #import pdb; pdb.set_trace()
             if hasattr(m, 'weight'):#remove ReLU 
                 normal_init(m, std=0.1,bias=0.95)
         '''
@@ -185,7 +182,6 @@ class MyPoseHand(nn.Module):
         
 
     def forward(self, features):
-        #import pdb; pdb.set_trace()
         base_features = self.base_layers(features)
         theta = self.pose_reg(base_features)#pose
         beta = self.shape_reg(base_features)#shape
@@ -205,14 +201,11 @@ class MyPoseHand(nn.Module):
             beta = torch.zeros_like(beta).to(beta.device)
         # try to set theta as zero tensor
         #theta = torch.zeros_like(theta)#
-        #import pdb; pdb.set_trace()
         jv, faces, tsa_poses = rot_pose_beta_to_mesh(rot, theta, beta)#rotation pose shape
-        #import pdb; pdb.set_trace()
         jv_ts = trans.unsqueeze(1) + torch.abs(scale.unsqueeze(2)) * jv[:,:,:]
         #jv_ts = jv_ts.view(x.size(0),-1) 
         joints = jv_ts[:,0:21]
         verts = jv_ts[:,21:]
-        #import pdb; pdb.set_trace()
         #joints,  verts, faces = pose_hand(mano, K)
         #joints,  verts, faces = None, None, None
         #return joints, verts, faces, theta, beta
@@ -229,7 +222,6 @@ class PoseHand(nn.Module):
         ):
         super(PoseHand, self).__init__()
         self.use_mean_shape = use_mean_shape
-        #import pdb;pdb.set_trace()
         # Base layers
         base_layers = []
         base_layers.append(nn.Linear(inp_neurons, 1024))
