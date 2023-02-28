@@ -389,29 +389,18 @@ def log_3d_results(j3d_ED_list, j2d_ED_list, epoch, logging):
     logging.info("Epoch_{0}, Mean_j3d_error:{1}, Mean_j2d_error:{2}".format(epoch, j3d_mean, j2d_mean))
 
 
-def visualize(mode_train,dat_name,epoch,idx_this,outputs,examples,args, op_outputs=None, writer=None, writer_tag='not-sure', is_val=False):
+def visualize(mode_train,dat_name,epoch,idx_this,outputs,examples,args, op_outputs=None, writer=None, writer_tag='not-sure'):
     # save images
-    if mode_train:
-        obj_output = os.path.join(args.obj_output,'train')
-        image_output = os.path.join(args.image_output, 'train')
-    elif is_val:
-        obj_output = os.path.join(args.obj_output,'val')
-        image_output = os.path.join(args.image_output, 'val')
-    else:
-        obj_output = os.path.join(args.obj_output,'test')
-        image_output = os.path.join(args.image_output, 'test')
-    os.makedirs(image_output, exist_ok=True)
-    os.makedirs(obj_output, exist_ok=True)
     if mode_train:
         if idx_this % args.demo_freq == 0:
             with torch.no_grad():
-                visualize_util.displadic(obj_output, image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
     else:
         if idx_this % args.demo_freq_evaluation == 0:
             with torch.no_grad():
-                visualize_util.displadic(obj_output, image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
             if args.img_wise_save:
-                visualize_util.multiview_render(image_output, outputs, epoch, idx_this)
+                visualize_util.multiview_render(args.image_output, outputs, epoch, idx_this)
                 if op_outputs is not None:
                     op_outputs['faces'] = outputs['faces']
                     op_outputs['face_textures'] = outputs['face_textures']

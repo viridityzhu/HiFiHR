@@ -185,7 +185,7 @@ def loss_func(examples, outputs, loss_used, dat_name, args):
     if 're_sil' in outputs and 'segms_gt' in examples:
         crit = nn.L1Loss()
         sil_loss = crit(outputs['re_sil'], examples['segms_gt'].float())
-        loss_dic['sil'] = sil_loss
+        loss_dic['sil'] = args.lambda_silhouette * sil_loss
     else:
         loss_dic['sil'] = torch.zeros(1)
 

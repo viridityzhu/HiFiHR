@@ -232,6 +232,16 @@ def main(base_path, set_name=None, writer = None):
         dat_name = args.train_datasets[0]#dat_name
     else:
         dat_name = args.train_datasets
+    
+    # for saving visualization outputs
+    if 'training' in set_name:
+        args.obj_output = os.path.join(args.obj_output,'train')
+        args.image_output = os.path.join(args.image_output, 'train')
+    else:
+        args.obj_output = os.path.join(args.obj_output,'test')
+        args.image_output = os.path.join(args.image_output, 'test')
+    os.makedirs(args.obj_output, exist_ok=True)
+    os.makedirs(args.image_output, exist_ok=True)
 
     #losses = AverageMeter()
     if 'training' in set_name:#set_name == 'training':
