@@ -5,7 +5,7 @@ import torch.nn.functional as torch_f
 import utils.pytorch_ssim as pytorch_ssim
 from utils.losses_util import bone_direction_loss, tsa_pose_loss, calc_laplacian_loss#image_l1_loss, iou_loss, ChamferLoss,
 
-def loss_func(examples, outputs, loss_used, dat_name, args):
+def loss_func(examples, outputs, loss_used, dat_name, args) -> dict:
     loss_dic = {}
     device = examples['imgs'].device
     # heatmap integral loss: estimated 2d joints -> openpose 2d joints

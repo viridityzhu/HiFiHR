@@ -1,0 +1,44 @@
+{
+    "train_datasets":["FreiHand"],
+    "val_datasets":["FreiHand"],
+    "freihand_base_path": "/storage_fast/jyzhu/HandRecon/freihand",
+    "base_out_path": "/storage_fast/jyzhu/HandRecon/outputs/freihand/fully_superv_small",
+    "is_write_tb": true,
+    "writer_topic": "runs/freihand/fully_superv/", 
+    "total_epochs": 120,
+    "init_lr": 0.001,
+    "lr_steps": [30, 60, 90, 120, 150],
+    "lr_gamma": 0.5,
+    "save_interval": 3,
+    "controlled_exp": true,
+    "controlled_size": 2000,
+    "train_batch":64,
+    "val_batch":8,
+    "num_workers":16,
+    "if_test": false,
+    "save_2d": false,
+    "save_mode": "only_latest",
+    "demo_freq": 100,
+
+    "new_model": true,
+
+    "freeze_hm_estimator": false,
+
+    "lambda_j2d_gt": 0.0001,
+    "lambda_j3d": 100,
+    "lambda_bone_direc": 0.1,
+    "lambda_scale": 100,
+    "lambda_silhouette": 0.005,
+    "lambda_pose": 0.1,
+
+    "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/fully_superv/model/texturehand_130.t7",
+
+    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales", "trans_masks"],
+    "val_queries": ["images","Ks"],
+    "losses": ["joint_2d" , "joint_3d", "bone_direc", "scale", "sil",
+                "triangle"], 
+    "train_requires": ["joints", "verts"],
+    "test_requires": ["joints", "verts"],
+    "task": "train",
+    "mode": ["training"]
+}

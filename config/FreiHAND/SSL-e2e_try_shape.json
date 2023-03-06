@@ -21,8 +21,6 @@
     "num_workers":12,
 
     "freeze_hm_estimator": false,
-    "lambda_j2d": 0.004,
-    "lambda_hm": 0.01,
 
     "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/SSL-e2e_2/model/texturehand_latest.t7",
 

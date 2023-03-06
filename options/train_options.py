@@ -11,6 +11,7 @@ def get_parser():
                         help='task: train, test, segm_train, hm_train, check, 2Dto3D')
     # For inputs
     parser.add_argument('--train_queries', type=list, default=['images','Ks','joints','open_2dj'])
+    parser.add_argument('--new_model', type=bool, default=False, help="whether add other inputs.")
     # FreiHand
     # - 'images','masks','maskRGBs','Ks','scales','manos','joints','verts','open_2dj','CRFmasks',
     # - 'trans_images','trans_open_2dj','trans_Ks','trans_CRFmasks','trans_masks','trans_joints','trans_verts',

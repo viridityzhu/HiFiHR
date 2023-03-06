@@ -19,27 +19,31 @@ from utils.visualize_util import face_vertices, json_load
 
 from torch.autograd import Variable
 from network.efficientnet_pt.model import EfficientNet
+from network.res_encoder import ResEncoder
 
 #from utils.fh_utils import AverageMeter
 
 # encoder efficientnet
 class Encoder(nn.Module):
-    def __init__(self,version='b3'):
+    def __init__(self, args, version='b3'):
         super(Encoder, self).__init__()
-        self.version = version
-        if self.version == 'b3':
-            #self.encoder = EfficientNet.from_pretrained('efficientnet-b3')
-            self.encoder = EfficientNet.from_name('efficientnet-b3')
-            # b3 [1536,7,7]
-            self.pool = nn.AvgPool2d(7, stride=1)
-        '''
-        elif self.version == 'b5':
-            self.encoder = EfficientNet.from_pretrained('efficientnet-b5')
-            # b5 [2048,7,7]
-            self.pool = nn.AvgPool2d(7, stride=1)
-        '''
+        if args.input_2dj:
+            self.encoder = ResEncoder()
+        else:
+            self.version = version
+            if self.version == 'b3':
+                #self.encoder = EfficientNet.from_pretrained('efficientnet-b3')
+                self.encoder = EfficientNet.from_name('efficientnet-b3')
+                # b3 [1536,7,7]
+                self.pool = nn.AvgPool2d(7, stride=1)
+            '''
+            elif self.version == 'b5':
+                self.encoder = EfficientNet.from_pretrained('efficientnet-b5')
+                # b5 [2048,7,7]
+                self.pool = nn.AvgPool2d(7, stride=1)
+            '''
     def forward(self, x):
-        features, low_features = self.encoder.extract_features(x)#[B,1536,7,7] [B,32,56,56]
+        features, low_features = self.encoder.extract_features(x)#[B,1536,7,7] = 75264,  [B,32,56,56] = 100352
         features = self.pool(features)
         features = features.view(features.shape[0],-1)##[B,1536]
         return features, low_features
@@ -198,7 +202,7 @@ class Model(nn.Module):
             self.use_mean_shape = args.use_mean_shape
             # self.use_2d_as_attention = args.use_2d_as_attention
             if self.regress_mode == 'mano':# efficient-b3
-                self.encoder = Encoder()
+                self.encoder = Encoder(args)
                 self.dim_in = 1536
                 self.hand_decoder = MyHandDecoder(inp_neurons=self.dim_in, use_mean_shape = self.use_mean_shape)
                 # if self.use_2d_as_attention:
@@ -480,10 +484,10 @@ class Model(nn.Module):
             '''
             return output
     #  only used in self-supervised learning: def forward(self, images=None, P=None, task='train', requires=['joints']):
-    def forward(self, images=None, mask_images = None, viewpoints=None, P=None, voxels=None, mano_para = None, task='train', requires=['joints'], gt_verts=None, gt_2d_joints=None, bgimgs=None):
+    def forward(self, images, mask_images = None, viewpoints=None, K=None, voxels=None, mano_para = None, task='train', requires=['joints'], gt_verts=None, gt_2d_joints=None, bgimgs=None):
         if task == 'train' or task == 'hm_train':
-            return self.predict_singleview(images, mask_images, P, task, requires, gt_verts, bgimgs)
+            return self.predict_singleview(images, mask_images, K, task, requires, gt_verts, bgimgs)
         elif task == 'stacked_train':
-            return self.stacked_predict_singleview(images, mask_images, P, task, requires, gt_verts, bgimgs)
+            return self.stacked_predict_singleview(images, mask_images, K, task, requires, gt_verts, bgimgs)
         elif task == 'test':
             return self.evaluate_iou(images, voxels)

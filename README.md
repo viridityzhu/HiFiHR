@@ -19,7 +19,7 @@ conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.2 -c pytorch
 
 Please compile the extension modules by running:
 ```
-pip install tqdm tensorboardX transforms3d chumpy scikit-image
+pip install tqdm tensorboardX transforms3d chumpy scikit-image timm
 
 git clone https://github.com/TerenceCYJ/neural_renderer.git
 cd neural_renderer

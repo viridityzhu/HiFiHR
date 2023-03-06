@@ -41,40 +41,36 @@ def get_dataset(
     limit_size=None,
     train = False,
     split = None,
+    if_use_j2d: bool = False
 ):
     if dat_name == "FreiHand":
         pose_dataset = FreiHand(
             base_path=base_path,
-            set_name = set_name,
-        )
+            set_name = set_name)
         sides = 'right',
     elif dat_name == 'Obman':
         pose_dataset = Obman(
             base_path=base_path,
             set_name = set_name,
             split = split,
-            mode = 'all',#'hand'
-        )
+            mode = 'all'),#'hand')
         sides = 'left',
     elif dat_name == 'Obman_hand':
         pose_dataset = Obman(
             base_path=base_path,
             set_name = set_name,
             split = split,
-            mode = 'hand',
-        )
+            mode = 'hand',)
         sides = 'left',
     elif dat_name == 'RHD':
         pose_dataset = RHD(
             base_path=base_path,
-            set_name = set_name,
-        )
+            set_name = set_name,)
         sides = 'both'
     elif dat_name == 'HO3D':
         pose_dataset = HO3D(
             base_path=base_path,
-            set_name = set_name,
-        )
+            set_name = set_name,)
         sides = 'both'
     elif dat_name == 'FHB':
         pose_dataset = FHBHands(
@@ -83,8 +79,7 @@ def get_dataset(
                 use_cache=use_cache,
                 use_objects=False,
                 split_type=meta["fhbhands_split_type"],
-                test_object=meta["fhbhands_split_choice"],
-            )
+                test_object=meta["fhbhands_split_choice"],)
     
     dataset = HandDataset(
         dat_name,
@@ -94,12 +89,13 @@ def get_dataset(
         #directory=None,
         is_train=train,
         #set_name=None,
+        if_use_j2d = if_use_j2d
     )
     
     if limit_size is not None:
         if len(dataset) < limit_size:
             warnings.warn(
-                "limit size {} < dataset size {}, working with full dataset".format(
+                "limit size {} > dataset size {}, working with full dataset".format(
                     limit_size, len(dataset)
                 )
             )
@@ -115,6 +111,7 @@ class HandDataset(Dataset):
         self, 
         dat_name,
         pose_dataset, 
+        if_use_j2d: bool,
         #directory=None, 
         is_train=None, 
         #set_name=None,
@@ -145,7 +142,7 @@ class HandDataset(Dataset):
         self.block_rot = False
         self.black_padding = False
         self.data_pre = False
-        #import pdb; pdb.set_trace()
+        self.if_use_j2d = if_use_j2d
     
     def __len__(self):
         return len(self.pose_dataset)
@@ -155,6 +152,7 @@ class HandDataset(Dataset):
             query = self.queries
         sample = {}
         #sample['dataset']=self.dat_name
+
         # Freihand
         if self.dat_name == 'FreiHand':
             image = self.pose_dataset.get_img(idx)
@@ -201,7 +199,6 @@ class HandDataset(Dataset):
             if 'cv_images' in query:
                 cv_image = self.pose_dataset.get_cv_image(idx)
                 sample['cv_images']=cv_image
-            #if 'idxs' in query:
             sample['idxs']=idx
             if 'masks' in query or 'trans_masks' in query:
                 if idx >= 32560:
@@ -278,6 +275,13 @@ class HandDataset(Dataset):
                     ).transpose()
                     sample['trans_verts'] = torch.from_numpy(trans_verts)
                 #sample['rot_mat'] = torch.from_numpy(rot_mat)
+            if self.if_use_j2d:
+                if 'images' in sample:
+                    assert 'open_2dj' in sample, "You should include 'open_2dj' in queries to use it as input."
+                    sample['images'] = torch.cat([sample['images'], sample['open_2dj']], dim=0)
+                if 'trans_images' in sample:
+                    assert 'trans_open_2dj' in sample, "You should include 'trans_open_2dj' in queries to use it as input."
+                    sample['trans_images'] = torch.cat([sample['trans_images'], sample['trans_open_2dj']], dim=0)
 
         # RHD
         if self.dat_name == 'RHD':
@@ -1682,8 +1686,8 @@ class HandDataset(Dataset):
             sample = self.get_sample(idx, self.queries)
         except Exception:
             traceback.print_exc()
-            print("Encountered error processing sample {}".format(idx))
             random_idx = random.randint(0, len(self))
+            print("Encountered error processing sample {}, try to use a random idx {} instead".format(idx, random_idx))
             sample = self.get_sample(random_idx, self.queries)
         return sample
 
