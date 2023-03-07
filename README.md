@@ -32,7 +32,8 @@ Note that under pytorch1.6, the neural_renderer may need to be modified before i
 
 For NIMBLE model, 
 ```sh
-conda install pytorch3d trimesh rtree
+conda install trimesh rtree
+conda install pytorch3d -c pytorch
 ```
 
 ### Data
