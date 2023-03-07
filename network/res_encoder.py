@@ -4,7 +4,6 @@ from torch.nn import init
 import torch.nn.functional as F
 import torchvision
 from torchvision import models
-from .utils import weights_init, weights_init_classifier
 import timm
 
 

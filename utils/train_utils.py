@@ -25,9 +25,18 @@ def load_model(model, args):
         if 'encoder' in state_dict.keys() and hasattr(model,'encoder'):
             model.encoder.load_state_dict(state_dict['encoder'])
             print('load encoder')
+        elif 'base_encoder' in state_dict.keys() and hasattr(model,'base_encoder'):
+            model.base_encoder.load_state_dict(state_dict['base_encoder'])
+            print('load encoder')
         if 'decoder' in state_dict.keys() and hasattr(model,'hand_decoder'):
             model.hand_decoder.load_state_dict(state_dict['decoder'])
             print('load hand_decoder')
+        elif 'hand_encoder' in state_dict.keys() and hasattr(model,'hand_encoder'):
+            model.hand_encoder.load_state_dict(state_dict['hand_encoder'])
+            print('load hand_encoder')
+        if 'nimble_layer' in state_dict.keys() and hasattr(model.module,'nimble_layer'):
+            model.nimble_layer.load_state_dict(state_dict['nimble_layer'])
+            print('load nimble_layer')
         if 'heatmap_attention' in state_dict.keys() and hasattr(model,'heatmap_attention'):
             model.heatmap_attention.load_state_dict(state_dict['heatmap_attention'])
             print('load heatmap_attention')
@@ -45,6 +54,8 @@ def load_model(model, args):
         
         if 'texture_light_from_low' in state_dict.keys() and hasattr(model,'texture_light_from_low'):
             model.texture_light_from_low.load_state_dict(state_dict['texture_light_from_low'])
+        if 'light_estimator' in state_dict.keys() and hasattr(model.module,'light_estimator'):
+            model.light_estimator.load_state_dict(state_dict['light_estimator'])
         if 'textures' in args.train_requires and 'texture_estimator' in state_dict.keys():
             if hasattr(model,'renderer'):
                 model.renderer.load_state_dict(state_dict['renderer'])
@@ -99,8 +110,15 @@ def save_model(model,optimizer,epoch,current_epoch, args):
     elif args.task == 'train':
         if hasattr(model.module,'encoder'):
             state['encoder'] = model.module.encoder.state_dict()
+        elif hasattr(model.module,'base_encoder'):
+            state['base_encoder'] = model.module.base_encoder.state_dict()
         if hasattr(model.module,'hand_decoder'):
             state['decoder'] = model.module.hand_decoder.state_dict()
+        elif hasattr(model.module,'hand_encoder'):
+            state['hand_encoder'] = model.module.hand_encoder.state_dict()
+        if hasattr(model.module,'nimble_layer'):
+            state['nimble_layer'] = model.module.nimble_layer.state_dict()
+        
         if hasattr(model.module,'heatmap_attention'):
             state['heatmap_attention'] = model.module.heatmap_attention.state_dict()
         if hasattr(model.module,'rgb2hm'):
@@ -115,6 +133,8 @@ def save_model(model,optimizer,epoch,current_epoch, args):
         
         if hasattr(model.module,'texture_light_from_low'):
             state['texture_light_from_low'] = model.module.texture_light_from_low.state_dict()
+        if hasattr(model.module,'light_estimator'):
+            state['light_estimator'] = model.module.light_estimator.state_dict()
 
         if 'textures' in args.train_requires:
             if hasattr(model.module,'renderer'):

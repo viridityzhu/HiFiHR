@@ -6,9 +6,6 @@ import os
 import math
 import time
 
-import utils.visualize_util as visualize_util
-from utils.visualize_util import face_vertices, json_load
-
 from torch.autograd import Variable
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer

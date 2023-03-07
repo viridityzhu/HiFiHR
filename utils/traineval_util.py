@@ -296,6 +296,16 @@ def trans_proj(outputs, Ks_this, dat_name, is_ortho=False):
     
     return outputs, xyz_pred_list, verts_pred_list
 
+
+def trans_proj_j2d(outputs, Ks_this, is_ortho=False):
+    if is_ortho:
+        proj_joints = orthographic_proj_withz(outputs['joints'], outputs['trans'], outputs['scale'])
+        j2d = proj_joints[:, :, :2]
+    else:    
+        j2d = proj_func(outputs['joints'], Ks_this)
+    
+    return j2d
+
 def save_2d_result(j2d_pred_ED_list,j2d_proj_ED_list,j2d_detect_ED_list,args,j2d_pred_list=[], j2d_proj_list=[], j2d_gt_list=[], j2d_detect_list=[], j2d_detect_con_list=[], epoch=0):
     save_dir = os.path.join(args.base_output_dir,'joint2d_result',str(epoch))
     os.makedirs(save_dir, exist_ok=True)

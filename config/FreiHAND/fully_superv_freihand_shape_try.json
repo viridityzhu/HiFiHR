@@ -34,10 +34,9 @@
 
     "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/fully_superv/model/texturehand_130.t7",
 
-    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales", "trans_masks"],
+    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales"],
     "val_queries": ["images","Ks"],
-    "losses": ["joint_2d" , "joint_3d", "bone_direc", "scale", "sil",
-                "triangle"], 
+    "losses": ["joint_2d" , "joint_3d", "scale", "mpose"], 
     "train_requires": ["joints", "verts"],
     "test_requires": ["joints", "verts"],
     "task": "train",

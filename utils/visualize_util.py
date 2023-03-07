@@ -11,13 +11,16 @@ import numpy as np
 import os
 
 from utils.fh_utils import *
+from utils.NIMBLE_model.utils import save_textured_nimble
 
-def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, j2d, hm_j2d, masks, maskRGBs, render_images,output_joints,joints,re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', img_wise_save=False, refhand=None, warphand=None):
-    demo_path = os.path.join(obj_output, 'demo_{:04d}_{:07d}.obj'.format(epoch, idx))
-    '''
-    if vertices is not None:
-        srf.save_obj(demo_path, vertices[0], faces[0])
-    '''
+def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, masks, maskRGBs, render_images,joints,joints_gt, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', img_wise_save=False, refhand=None, warphand=None):
+    # save 3d obj demo
+    if skin_meshes is not None:
+        demo_path = os.path.join(obj_output, 'demo_{:04d}_{:07d}.obj'.format(epoch, idx))
+        skin_v_smooth = skin_meshes[idx].verts_padded().detach().cpu().numpy()
+        save_textured_nimble(demo_path, skin_v_smooth, textures[idx])
+
+    # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}.png'.format(epoch, idx))
     fig = plt.figure()
     ax1 = fig.add_subplot(441)
@@ -43,7 +46,7 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     ax_font_size = 6
     # 11 Image + GT 2D keypints
     ax1.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
-    ax1.set_title("input image", fontsize=ax_font_size)
+    ax1.set_title("Input Image", fontsize=ax_font_size)
     ax1.axis('off')
     if j2d_gt is not None:
         uv = j2d_gt[0].detach().cpu().numpy()
@@ -53,13 +56,13 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     # 12 GT mask
     if masks is not None:
         ax2.imshow(masks[0].cpu().permute(1,2,0).numpy())
-    ax2.set_title("GT mask", fontsize=ax_font_size)
+        ax2.set_title("GT mask", fontsize=ax_font_size)
     ax2.axis('off')
 
     # 13 GT maskRGB image
     if maskRGBs is not None:
         ax3.imshow(maskRGBs[0].cpu().permute(1,2,0).numpy())
-    ax3.set_title("GT masked image", fontsize=ax_font_size)
+        ax3.set_title("GT masked image", fontsize=ax_font_size)
     ax3.axis('off')
 
     # 14 GT Depth
@@ -68,7 +71,7 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
         ax4.imshow(gt_depth[0].cpu().detach().numpy())
         #ax6.imshow(gt_depth[0].cpu().detach().permute(1,2,0).numpy())
         #ax9.imshow(re_depth[0].cpu().detach().permute(1,2,0).numpy())
-    ax4.set_title("GT Depth", fontsize=ax_font_size)
+        ax4.set_title("GT Depth", fontsize=ax_font_size)
     ax4.axis('off')
 
     # 21 Image + output 2D keypints
@@ -77,20 +80,20 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
         uv_out = j2d[0].detach().cpu().numpy()
         #plot_hand(ax5, uv_out, order='uv', dataset_name=dataset_name)
         plot_hand(ax5, uv_out, order='uv')
-    ax5.set_title("output joints in img", fontsize=ax_font_size)
+    ax5.set_title("Pred joints", fontsize=ax_font_size)
     ax5.axis('off')
 
     # 22 Rendered mask
     if re_sil is not None:
         re_sil = re_sil[0].repeat(3,1,1)
         ax6.imshow(re_sil.cpu().detach().permute(1,2,0).numpy())
-    ax6.set_title("Rendered Mask", fontsize=ax_font_size)
+        ax6.set_title("Rendered Mask", fontsize=ax_font_size)
     ax6.axis('off')
 
     # 23 Rendered RGB image
     if re_img is not None:
         ax7.imshow(re_img[0].cpu().detach().permute(1,2,0).numpy())
-    ax7.set_title("Rendered Img", fontsize=ax_font_size)
+        ax7.set_title("Rendered Img", fontsize=ax_font_size)
     ax7.axis('off')
 
     # 24 Rendered detph
@@ -98,47 +101,50 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
         #import pdb; pdb.set_trace()
         ax8.imshow(re_depth[0].cpu().detach().numpy())
         #ax9.imshow(re_depth[0].cpu().detach().permute(1,2,0).numpy())
-    ax8.set_title("Rendered Depth", fontsize=ax_font_size)
+        ax8.set_title("Rendered Depth", fontsize=ax_font_size)
     ax8.axis('off')
 
-    # 31 Image + output 2D keypints
+    # 31 Image + Openpose  or hm 2D keypints
     ax9.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
     if hm_j2d is not None:
         uv_out = hm_j2d[0].detach().cpu().numpy()
-        #plot_hand(ax5, uv_out, order='uv', dataset_name=dataset_name)
         plot_hand(ax9, uv_out, order='uv')
-    ax9.set_title("heatmap keypoints", fontsize=ax_font_size)
+        ax9.set_title("Heatmap joints", fontsize=ax_font_size)
+    elif open_2dj is not None:
+        uv_out = open_2dj[0].detach().cpu().numpy()
+        plot_hand(ax9, uv_out, order='uv')
+        ax9.set_title("Openpose joints", fontsize=ax_font_size)
     ax9.axis('off')
 
-    # 32 Output 3d joints
-    if output_joints is not None:
-        j3d_out = output_joints[0].detach().cpu().numpy()
-        #ax7=Axes3D(ax7)
-        plot_hand_3d(ax10, j3d_out, order='xyz')
-        if lims is not None:
-            ax10.set_xlim(lims[0],lims[1])
-            ax10.set_ylim(lims[2],lims[3])
-            ax10.set_zlim3d(lims[4],lims[5])
-    ax10.set_title("Output 3d joints", fontsize=ax_font_size)
-    
     # 33 GT 3d Joints
     lims = None
-    if joints is not None:
-        j3d_gt = joints[0].detach().cpu().numpy()
-        #import pdb;pdb.set_trace()
-        xlim_min = joints[0,:,0].min()*1.25- joints[0,:,0].max()*0.25
-        xlim_max = joints[0,:,0].max()*1.25- joints[0,:,0].min()*0.25
-        ylim_min = joints[0,:,1].min()*1.25- joints[0,:,1].max()*0.25
-        ylim_max = joints[0,:,1].max()*1.25- joints[0,:,1].min()*0.25
-        zlim_min = joints[0,:,2].min()*1.25- joints[0,:,2].max()*0.25
-        zlim_max = joints[0,:,2].max()*1.25- joints[0,:,2].min()*0.25
+    if joints_gt is not None:
+        j3d_gt = joints_gt[0].detach().cpu().numpy()
+        xlim_min = joints_gt[0,:,0].min()*1.25- joints_gt[0,:,0].max()*0.25
+        xlim_max = joints_gt[0,:,0].max()*1.25- joints_gt[0,:,0].min()*0.25
+        ylim_min = joints_gt[0,:,1].min()*1.25- joints_gt[0,:,1].max()*0.25
+        ylim_max = joints_gt[0,:,1].max()*1.25- joints_gt[0,:,1].min()*0.25
+        zlim_min = joints_gt[0,:,2].min()*1.25- joints_gt[0,:,2].max()*0.25
+        zlim_max = joints_gt[0,:,2].max()*1.25- joints_gt[0,:,2].min()*0.25
         lims = [xlim_min.cpu().numpy(), xlim_max.cpu().numpy(), ylim_min.cpu().numpy(), ylim_max.cpu().numpy(), zlim_min.cpu().numpy(), zlim_max.cpu().numpy()]
         #ax9=Axes3D(ax9)
         plot_hand_3d(ax11, j3d_gt, order='xyz')
         ax11.set_xlim(lims[0],lims[1])
         ax11.set_ylim(lims[2],lims[3])
         ax11.set_zlim3d(lims[4],lims[5])
-    ax11.set_title("GT 3d joints", fontsize=ax_font_size)
+    ax11.set_title("GT 3D joints", fontsize=ax_font_size)
+
+    # 32 Output 3d joints
+    if joints is not None:
+        j3d_out = joints[0].detach().cpu().numpy()
+        plot_hand_3d(ax10, j3d_out, order='xyz')
+        if lims is not None:
+            ax10.set_xlim(lims[0],lims[1])
+            ax10.set_ylim(lims[2],lims[3])
+            ax10.set_zlim3d(lims[4],lims[5])
+    ax10.set_title("Pred 3D joints", fontsize=ax_font_size)
+    
+   
     # 33 GT one side point cloud
     '''
     if pc_gt_depth is not None or pc_re_depth is not None:
@@ -171,17 +177,17 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     ax12.axis('off')
     
     # 41
-    ax13.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
-    ax13.set_title("object keypoints", fontsize=ax_font_size)
     ax13.axis('off')
     if obj_uv6 is not None:
+        ax13.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+        ax13.set_title("object keypoints", fontsize=ax_font_size)
         uv = obj_uv6[0].detach().cpu().numpy()
         ax13.scatter(uv[:,0],uv[:,1])
 
 
     # 42 for opti 2dj
-    ax14.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
     if opt_j2d is not None:
+        ax14.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
         uv = opt_j2d[0].detach().cpu().numpy()
         plot_hand(ax14, uv, order='uv', dataset_name=dataset_name)
         ax14.set_title("optimized projected", fontsize=ax_font_size)
@@ -190,7 +196,7 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     # 43
     if warphand is not None:
         ax15.imshow(warphand[0].cpu().permute(1, 2, 0).numpy())
-    ax15.set_title("warp hand image", fontsize=ax_font_size)
+        ax15.set_title("warp hand image", fontsize=ax_font_size)
     ax15.axis('off')
 
     if opt_img is not None:
@@ -201,7 +207,7 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     # 44
     if refhand is not None:
         ax16.imshow(refhand[0].cpu().permute(1, 2, 0).numpy())
-    ax16.set_title("ref hand image", fontsize=ax_font_size)
+        ax16.set_title("ref hand image", fontsize=ax_font_size)
     ax16.axis('off')
 
     
@@ -450,7 +456,12 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
 
 
 def displadic(obj_output, image_output, epoch, idx, examples, outputs, dat_name, op_outputs=None, opt_j2d=None, opt_img=None, writer=None, writer_tag='not-sure', img_wise_save=False):
-    vertices = outputs['vertices'] if 'vertices' in outputs else None
+    if 'verts' in outputs:
+        vertices = outputs['verts']
+    elif 'vertices' in outputs:
+        vertices = outputs['vertices']
+    else:
+        vertices = None
     faces = outputs['faces'] if 'faces' in outputs else None
     imgs = examples['imgs'] if 'imgs' in examples else None
     open_2dj = examples['open_2dj'] if 'open_2dj' in examples else None
@@ -459,28 +470,26 @@ def displadic(obj_output, image_output, epoch, idx, examples, outputs, dat_name,
     hm_j2d_list = outputs['hm_j2d_list'] if 'hm_j2d_list' in outputs else [None]
     masks = examples['masks'] if 'masks' in examples else None
     maskRGBs = outputs['maskRGBs'] if 'maskRGBs' in outputs else None
-    output_joints = outputs['output_joints'] if 'output_joints' in outputs else None
-    joints = outputs['joints'] if 'joints' in outputs else None
     re_sil = outputs['re_sil'] if 're_sil' in outputs else None
     re_img = outputs['re_img'] if 're_img' in outputs else None
     re_depth = outputs['re_depth'] if 're_depth' in outputs else None
+    joints = outputs['joints'] if 'joints' in outputs else None
+    joints_gt = examples['joints'] if 'joints' in examples else None
     gt_depth = examples['gt_depth'] if 'gt_depth' in examples else None
     pc_gt_depth = examples['pc_gt_depth'] if 'pc_gt_depth' in examples else None
     pc_re_depth = examples['pc_gt_depth'] if 'pc_gt_depth' in examples else None
     refhand = examples['refhand'] if 'refhand' in examples else None
     warphand = outputs['warphand'] if 'warphand' in outputs else None
+    skin_meshes = outputs['skin_meshes'] if 'skin_meshes' in outputs else None
+    textures = outputs['textures'] if 'textures' in outputs else None
     
     #hm_j2d_list = outputs['hm_j2d_list'] if 'hm_j2d_list' in outputs else None
-    #import pdb; pdb.set_trace()
     if op_outputs is not None:
         #opt_img = 
         opt_j2d = op_outputs['j2d']
         opt_img = op_outputs['re_img']
 
-    if open_2dj is not None:
-        displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, open_2dj, j2d, hm_j2d_list[-1], masks, maskRGBs, None, output_joints,joints,re_sil, re_img, re_depth,gt_depth,pc_gt_depth, pc_re_depth, opt_j2d = opt_j2d, opt_img=opt_img, dataset_name=dat_name, writer=writer, writer_tag=writer_tag, img_wise_save=img_wise_save, refhand=refhand, warphand = warphand)
-    else:
-        displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, j2d, hm_j2d_list[-1], masks, maskRGBs, None, output_joints,joints,re_sil, re_img, re_depth,gt_depth,pc_gt_depth, pc_re_depth, opt_j2d = opt_j2d, opt_img=opt_img, dataset_name=dat_name, writer=writer, writer_tag=writer_tag, img_wise_save=img_wise_save, refhand=refhand, warphand = warphand)
+        displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d_list[-1], masks, maskRGBs, None, joints,joints_gt,re_sil, re_img, re_depth,gt_depth,pc_gt_depth, pc_re_depth, skin_meshes=skin_meshes, textures=textures, opt_j2d = opt_j2d, opt_img=opt_img, dataset_name=dat_name, writer=writer, writer_tag=writer_tag, img_wise_save=img_wise_save, refhand=refhand, warphand = warphand)
     
     '''
     if op_outputs is not None:
