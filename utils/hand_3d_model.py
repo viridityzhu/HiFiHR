@@ -153,6 +153,7 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
         + Ts[3].contiguous().view(batch_size, 4, mesh_num) * rest_shape_hs[3].contiguous().view(-1, 1, mesh_num)
    
     #v = v.permute(0,2,1)[:,:,:3] 
+    # v: b, 4, 778 mesh_num
     Rots = rodrigues(rots)[0]
     Jtr = []
 
@@ -167,7 +168,8 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     Jtr.insert(16,v[:,:3,555].unsqueeze(2))
     Jtr.insert(20,v[:,:3,745].unsqueeze(2)) 
     '''
-    # For FreiHand
+    # v is of shape: b, 3 (or more) dims, 778 samples
+    # For FreiHand: add 5 joints.
     Jtr.insert(4,v[:,:3,320].unsqueeze(2))
     Jtr.insert(8,v[:,:3,443].unsqueeze(2))
     Jtr.insert(12,v[:,:3,672].unsqueeze(2))

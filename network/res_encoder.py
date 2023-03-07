@@ -103,14 +103,14 @@ class HandEncoder(nn.Module):
         self.trans_reg = nn.Sequential(*layers)
         self.trans_reg.apply(weights_init)
 
-        # rot layers: 512 -> 3
-        layers = []
-        layers.append(nn.Linear(512, 128))
-        layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Linear(128, 32))
-        layers.append(nn.Linear(32, 3))
-        self.rot_reg = nn.Sequential(*layers)
-        self.rot_reg.apply(weights_init)
+        # # rot layers: 512 -> 3
+        # layers = []
+        # layers.append(nn.Linear(512, 128))
+        # layers.append(nn.ReLU(inplace=True))
+        # layers.append(nn.Linear(128, 32))
+        # layers.append(nn.Linear(32, 3))
+        # self.rot_reg = nn.Sequential(*layers)
+        # self.rot_reg.apply(weights_init)
 
         # scale layers: 512 -> 1
         layers = []
@@ -128,7 +128,7 @@ class HandEncoder(nn.Module):
         texture_params = self.tex_reg(base_features)#shape
         scale = self.scale_reg(base_features)
         trans = self.trans_reg(base_features)
-        rot = self.rot_reg(base_features)
+        # rot = self.rot_reg(base_features)
         if self.use_mean_shape:
             shape_params = torch.zeros_like(shape_params).to(shape_params.device)
         return {
@@ -137,7 +137,7 @@ class HandEncoder(nn.Module):
             'texture_params': texture_params, 
             'scale': scale, 
             'trans': trans, 
-            'rot':rot
+            # 'rot':rot
         }
 
 class LightEstimator(nn.Module):

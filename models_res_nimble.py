@@ -62,7 +62,24 @@ class Model(nn.Module):
         else:
             self.get_gt_depth = False
 
-    def forward(self, images, mask_images = None, viewpoints=None, P=None, voxels=None, mano_para = None, task='train', requires=['joints'], gt_verts=None, gt_2d_joints=None, bgimgs=None):
+    def jnts_map_nimble2frei(self, nimble_joints):#[b,25,3]
+        frei_joints = torch.zeros_like(nimble_joints).to(nimble_joints.device) # init empty list
+
+        # nimbleId, FreiId
+        mapping = {0: 0, #Wrist
+                1: 1, 2: 2, 3: 3, 4: 4, # Thumb
+                6: 5, 7: 6, 8: 7, 9: 8, #Index
+                11: 9, 12: 10, 13: 11, 14: 12, #Middle
+                16: 13, 17: 14, 18: 15, 19: 16, # Ring
+                21: 17, 22: 18, 23: 19, 24: 20, # Pinky
+                } 
+
+        for nimbleId, freiId in mapping.items():
+            frei_joints[:,freiId] = nimble_joints[:,nimbleId]
+        return frei_joints
+
+
+    def forward(self, images, mask_images = None, viewpoints=None, Ks=None, task='train', requires=['joints'], gt_verts=None, gt_2d_joints=None, bgimgs=None):
         '''
             return: an output dict including:
                 - theta (pose), beta (shape), scale, trans, rot estimations
@@ -71,48 +88,58 @@ class Model(nn.Module):
                 - face_textures, re_sil, re_img, re_depth [, gt_depth] after rendering
                 - render: renderer itself
         '''
+        device = images.device
         # Use base_encoder to extract features
         low_features, features = self.base_encoder(images)#[b, 512, 14, 14], [b,1024]
         
         # Use hand_encoder to get hand parameters
         hand_params  = self.hand_encoder(features)
+        # hand_params = {
+        #     'pose_params': pose_params, 
+        #     'shape_params': shape_params, 
+        #     'texture_params': texture_params, 
+        #     'scale': scale, 
+        #     'trans': trans, 
+        # }
 
         # Use nimble_layer to get 3D hand models
         outputs = self.nimble_layer(hand_params)
+        # outputs = {
+        #     'joints': bone_joints, # 25 joints
+        #     'verts': skin_v, # 5990 verts
+        #     'faces': faces,
+        #     'skin_meshes': skin_v_smooth, # smoothed verts and faces
+        #     'mano_verts': skin_mano_v, # 5990 -> 778 verts according to mano
+        #     'textures': tex_img,
+        #     'rot':rot
+        # }
 
+        # map nimble 25 joints to freihand 21 joints
+        outputs['joints'] = self.jnts_map_nimble2frei(outputs['joints'])
 
-        output['joints'], output['vertices'] = joints, vertices
-        output['pose'], output['shape'], output['scale'], output['trans'], output['rot'] = pose, shape, scale, trans, rot
-        output['tsa_poses'] = tsa_poses
-        
         # 3. Texture & Lighting Estimation
         if 'textures' in requires or 'lights' in requires:
 
             if 'lights' in requires:                     
                 lights = self.light_estimator(low_features)
-                self.renderer_NR.light_intensity_ambient = lights[:,0].to(vertices.device)
-                self.renderer_NR.light_intensity_directional = lights[:,1].to(vertices.device)
-                self.renderer_NR.light_color_ambient = lights[:,2:5].to(vertices.device)
-                self.renderer_NR.light_color_directional = lights[:,5:8].to(vertices.device)
-                self.renderer_NR.light_direction = lights[:,8:].to(vertices.device)
-            output['textures'] = textures
-            output['lights'] = lights
+                self.renderer_NR.light_intensity_ambient = lights[:,0].to(device)
+                self.renderer_NR.light_intensity_directional = lights[:,1].to(device)
+                self.renderer_NR.light_color_ambient = lights[:,2:5].to(device)
+                self.renderer_NR.light_color_directional = lights[:,5:8].to(device)
+                self.renderer_NR.light_direction = lights[:,8:].to(device)
+                outputs['lights'] = lights
 
         # 4. Render image
-        faces = faces.type(torch.int32)
+        faces = outputs['faces'].type(torch.int32)
         if self.render_choice == 'NR':
             # use neural renderer
             #I = torch.tensor([[1,0,0,0],[0,1,0,0],[0,0,1,0]]).float()
             #Is = torch.unsqueeze(I,0).repeat(Ks.shape[0],1,1).to(Ks.device)
-            # create textures
-            if textures is None:
-                texture_size = 1
-                textures = torch.ones(faces.shape[0], faces.shape[1], texture_size, texture_size, texture_size, 3, dtype=torch.float32).to(vertices.device)
             
-            self.renderer_NR.R = torch.unsqueeze(torch.tensor([[1,0,0],[0,1,0],[0,0,1]]).float(),0).repeat(Ks.shape[0],1,1).to(vertices.device)
-            self.renderer_NR.t = torch.unsqueeze(torch.tensor([[0,0,0]]).float(),0).repeat(Ks.shape[0],1,1).to(vertices.device)
-            self.renderer_NR.K = Ks[:,:,:3].to(vertices.device)
-            self.renderer_NR.dist_coeffs = self.renderer_NR.dist_coeffs.to(vertices.device)
+            self.renderer_NR.R = torch.unsqueeze(torch.tensor([[1,0,0],[0,1,0],[0,0,1]]).float(),0).repeat(Ks.shape[0],1,1).to(device)
+            self.renderer_NR.t = torch.unsqueeze(torch.tensor([[0,0,0]]).float(),0).repeat(Ks.shape[0],1,1).to(device)
+            self.renderer_NR.K = Ks[:,:,:3].to(device)
+            self.renderer_NR.dist_coeffs = self.renderer_NR.dist_coeffs.to(device)
             
             face_textures = textures.view(textures.shape[0],textures.shape[1],1,1,1,3)
             
