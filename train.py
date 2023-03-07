@@ -40,7 +40,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         examples = data_dic(sample, dat_name, set_name, args)
         
         # Use the network to predict the outputs
-        outputs = model(examples['imgs'], P=examples['Ps'], task=args.task, requires=requires)
+        if args.new_model:
+            outputs = model(examples['imgs'], Ks=examples['Ps'])
+        else:
+            outputs = model(examples['imgs'], P=examples['Ps'], task=args.task, requires=requires)
         
         # Projection transformation, project to 2D
         if 'joints' in outputs:
@@ -325,7 +328,7 @@ if __name__ == '__main__':
 
     if args.new_model:
         print("Using new model... Equipping Resnet and NIMBLE!!")
-        model = models_new.Model(args=args)
+        model = models_new.Model(ifRender=args.render, device=args.device)
     else:
         model = models.Model(args=args)
     

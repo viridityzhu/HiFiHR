@@ -21,6 +21,7 @@
     "demo_freq": 100,
 
     "new_model": true,
+    "render": false,
 
     "freeze_hm_estimator": false,
 

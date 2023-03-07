@@ -9,7 +9,7 @@ import timm
 
 
 class ResEncoder(nn.Module):
-    def __init__(self, nc, nk, pretrain='hr18sv2', droprate=0.0, coordconv=False, norm = 'bn'):
+    def __init__(self, nc:int=4, nk:int=1, pretrain:str='hr18sv2', droprate=0.0, coordconv=False, norm = 'bn'):
         super(ResEncoder, self).__init__()
         self.mmpool = MMPool((1,1))
         if pretrain=='none':
@@ -32,12 +32,8 @@ class ResEncoder(nn.Module):
             in_dim = 2048 
         else: 
             print('unknown network')
-        ################################################# Compress 2D 
-        norm = [] #[nn.InstanceNorm1d(in_dim*3 + 3, affine=True)]
 
     def forward(self, x):
-        # 3D shape bias is conditioned on 3D template.
-        bnum = x.shape[0]
         ################### PreProcessing
         x = normalize_batch_4C(x) 
         #################### Backbone
@@ -52,13 +48,16 @@ class HandEncoder(nn.Module):
         Estimates:
             joints, verts, faces, theta, beta, scale, trans, rot, tsa_poses
     '''
-    def __init__(self,in_dim=1024,use_mean_shape=False):
+    def __init__(self, ncomps:list, in_dim=1024, use_mean_shape=False, ifRender=True):
         super(HandEncoder, self).__init__()
         if use_mean_shape:
             print("use mean MANO shape")
         else:
             print("do not use mean MANO shape")
         self.use_mean_shape = use_mean_shape
+        self.ifRender = ifRender
+        self.shape_ncomp, self.pose_ncomp, self.tex_ncomp = ncomps
+
         # Base layers: in_dim -> 512
         base_layers = []
         base_layers.append(nn.Linear(in_dim, 1024))
@@ -74,7 +73,7 @@ class HandEncoder(nn.Module):
         layers = []
         layers.append(nn.Linear(512, 128))
         layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Linear(128, 30))#6
+        layers.append(nn.Linear(128, self.pose_ncomp))
         self.pose_reg = nn.Sequential(*layers)
         self.pose_reg.apply(weights_init)
 
@@ -82,7 +81,7 @@ class HandEncoder(nn.Module):
         layers = []
         layers.append(nn.Linear(512, 128))
         layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Linear(128, 20))
+        layers.append(nn.Linear(128, self.shape_ncomp))
         self.shape_reg = nn.Sequential(*layers)
         self.shape_reg.apply(weights_init)
 
@@ -90,7 +89,7 @@ class HandEncoder(nn.Module):
         layers = []
         layers.append(nn.Linear(512, 128))
         layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Linear(128, 20))
+        layers.append(nn.Linear(128, self.tex_ncomp))
         self.tex_reg = nn.Sequential(*layers)
         self.tex_reg.apply(weights_init)
 
@@ -122,15 +121,24 @@ class HandEncoder(nn.Module):
         self.scale_reg.apply(weights_init)
 
     def forward(self, features):
+        bs = features.shape[0]
+        device = features.device
+        
         base_features = self.base_layers(features)
         pose_params = self.pose_reg(base_features)#pose
-        shape_params = self.shape_reg(base_features)#shape
-        texture_params = self.tex_reg(base_features)#shape
         scale = self.scale_reg(base_features)
         trans = self.trans_reg(base_features)
         # rot = self.rot_reg(base_features)
+        if self.ifRender:
+            texture_params = self.tex_reg(base_features)#shape
+        else:
+            texture_params = torch.zeros(bs, self.tex_ncomp).to(device)
+            
         if self.use_mean_shape:
-            shape_params = torch.zeros_like(shape_params).to(shape_params.device)
+            shape_params = torch.zeros(bs, self.shape_ncomp).to(device)
+        else:
+            shape_params = self.shape_reg(base_features)#shape
+
         return {
             'pose_params': pose_params, 
             'shape_params': shape_params, 
