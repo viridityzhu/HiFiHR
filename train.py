@@ -188,7 +188,7 @@ def train(base_path, set_name=None, writer = None):
                 queries = train_queries,
                 train = True,
                 limit_size=limit_size,
-                if_use_j2d = args.new_model
+                if_use_j2d = args.four_channel
                 #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
             )
             print("Training dataset size: {}".format(len(train_dat)))

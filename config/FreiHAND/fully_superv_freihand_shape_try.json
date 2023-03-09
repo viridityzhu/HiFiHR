@@ -22,6 +22,7 @@
 
     "new_model": true,
     "render": false,
+    "four_channel": false,
 
     "lambda_j2d_gt": 0.0001,
     "lambda_j3d": 100,
@@ -29,7 +30,7 @@
     "lambda_pose": 0.1,
 
 
-    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales"],
+    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales", "trans_open_2dj"],
     "val_queries": ["images","Ks"],
     "losses": ["joint_2d" , "joint_3d", "scale", "mpose"], 
     "train_requires": ["joints", "verts"],

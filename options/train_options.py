@@ -12,6 +12,7 @@ def get_parser():
     # For inputs
     parser.add_argument('--train_queries', type=list, default=['images','Ks','joints','open_2dj'])
     parser.add_argument('--new_model', type=bool, default=False, help="whether add other inputs.")
+    parser.add_argument('--four_channel', type=bool, default=False, help="whether add open 2dj as input.")
     # FreiHand
     # - 'images','masks','maskRGBs','Ks','scales','manos','joints','verts','open_2dj','CRFmasks',
     # - 'trans_images','trans_open_2dj','trans_Ks','trans_CRFmasks','trans_masks','trans_joints','trans_verts',

@@ -281,7 +281,9 @@ class HandDataset(Dataset):
                     sample['images'] = torch.cat([sample['images'], sample['open_2dj']], dim=0)
                 if 'trans_images' in sample:
                     assert 'trans_open_2dj' in sample, "You should include 'trans_open_2dj' in queries to use it as input."
+                    print(sample['trans_images'].shape, sample['trans_open_2dj'].shape )
                     sample['trans_images'] = torch.cat([sample['trans_images'], sample['trans_open_2dj']], dim=0)
+
 
         # RHD
         if self.dat_name == 'RHD':
