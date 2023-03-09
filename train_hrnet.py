@@ -316,7 +316,7 @@ if __name__ == '__main__':
 
     if args.new_model:
         print("Using new model... Equipping Resnet and NIMBLE!!")
-        model = models_new.Model(ifRender=args.render, device=args.device)
+        model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel)
     else:
         model = models.Model(args=args)
     

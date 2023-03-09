@@ -35,7 +35,7 @@ def proj_func(xyz, K):
     uv = torch.bmm(K,xyz.permute(0,2,1))
     uv = uv.permute(0, 2, 1)
     out_uv = torch.zeros_like(uv[:,:,:2]).to(device=uv.device)
-    out_uv = torch.addcdiv(out_uv, 1 ,uv[:,:,:2], uv[:,:,2].unsqueeze(-1).repeat(1,1,2))
+    out_uv = torch.addcdiv(out_uv, uv[:,:,:2], uv[:,:,2].unsqueeze(-1).repeat(1,1,2), value=1)
     return out_uv
 
 

@@ -12,12 +12,12 @@ from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
 
 
 class Model(nn.Module):
-    def __init__(self, ifRender, device):
+    def __init__(self, ifRender, device, if_4c):
         super(Model, self).__init__()
         self.features_dim = 1024 # for HRnet
         self.ncomps = [20, 30, 10] # shape, pose, tex respectively.
 
-        self.base_encoder = ResEncoder(pretrain='hr18sv2')
+        self.base_encoder = ResEncoder(pretrain='hr18sv2', if_4c=if_4c)
         self.hand_encoder = HandEncoder(ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender)
         self.nimble_layer = MyNIMBLELayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
 

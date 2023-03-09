@@ -8,7 +8,7 @@ import timm
 
 
 class ResEncoder(nn.Module):
-    def __init__(self, nc:int=4, nk:int=1, pretrain:str='hr18sv2', droprate=0.0, coordconv=False, norm = 'bn'):
+    def __init__(self, nc:int=4, nk:int=1, pretrain:str='hr18sv2', droprate=0.0, coordconv=False, norm = 'bn', if_4c=True):
         super(ResEncoder, self).__init__()
         self.mmpool = MMPool((1,1))
         if pretrain=='none':
@@ -27,14 +27,18 @@ class ResEncoder(nn.Module):
             self.encoder1 = Resnet_4C(pretrain)
             in_dim = 2048 
         elif 'hr18' in pretrain:
-            self.encoder1 = HRnet_4C(pretrain)
+            self.encoder1 = HRnet_4C(pretrain, if_4c=if_4c)
             in_dim = 2048 
         else: 
             print('unknown network')
+        if if_4c:
+            self.norm_func = normalize_batch_4C
+        else:
+            self.norm_func = normalize_batch_3C
 
     def forward(self, x):
         ################### PreProcessing
-        x = normalize_batch_4C(x) 
+        x = self.norm_func(x) 
         #################### Backbone
         #with torch.no_grad():
         low_features, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
@@ -337,7 +341,7 @@ class Resnet_4C(nn.Module):
         return x 
 
 class HRnet_4C(nn.Module):
-    def __init__(self, pretrain):
+    def __init__(self, pretrain, if_4c=False):
         super(HRnet_4C, self).__init__()
         if pretrain == 'hr18':
             model = timm.create_model('hrnet_w18', pretrained=True, features_only=True, out_indices=[3,4])
@@ -345,11 +349,12 @@ class HRnet_4C(nn.Module):
             model = timm.create_model('hrnet_w18_small_v2', pretrained=True, features_only=True, out_indices=[3,4]) #  2: [b, 256, 28, 28] = 200704, 3: [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
         elif pretrain == 'hr18sv1':
             model = timm.create_model('hrnet_w18_small', pretrained=True, features_only=True, out_indices=[3,4])
-        # weight initialization: the weight of the 4th channel of the first layer is the mean of the weight.
-        weight = model.conv1.weight.clone()
-        model.conv1 = nn.Conv2d(4, 64, kernel_size=3, stride=2, padding=1, bias=False) #here 4 indicates 4-channel input
-        model.conv1.weight.data[:, :3] = weight
-        model.conv1.weight.data[:, 3] = torch.mean(weight, dim=-1)  #model.conv1.weight[:, 0]
+        if if_4c:
+            # weight initialization: the weight of the 4th channel of the first layer is the mean of the weight.
+            weight = model.conv1.weight.clone()
+            model.conv1 = nn.Conv2d(4, 64, kernel_size=3, stride=2, padding=1, bias=False) #here 4 indicates 4-channel input
+            model.conv1.weight.data[:, :3] = weight
+            model.conv1.weight.data[:, 3] = torch.mean(weight, dim=-1)  #model.conv1.weight[:, 0]
         self.model = model
     def forward(self, x):
         low_features, features = self.model(x) # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
