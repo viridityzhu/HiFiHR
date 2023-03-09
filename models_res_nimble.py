@@ -41,7 +41,7 @@ class Model(nn.Module):
                 self.color_estimator = ColorEstimator(dim_in=self.dim_in)
             self.light_estimator = light_estimator(dim_in=self.dim_in)
             '''
-            self.light_estimator = LightEstimator(mode='surf')
+            # self.light_estimator = LightEstimator(mode='surf')
 
         # Pose adapter
         # if (args.train_datasets)[0] == 'FreiHand':
@@ -62,7 +62,7 @@ class Model(nn.Module):
         #     self.get_gt_depth = False
 
     def jnts_map_nimble2frei(self, nimble_joints):#[b,25,3]
-        frei_joints = torch.zeros_like(nimble_joints).to(nimble_joints.device) # init empty list
+        frei_joints = torch.zeros(nimble_joints.shape[0], 21, nimble_joints.shape[2]).to(nimble_joints.device) # init empty list
 
         # nimbleId, FreiId
         mapping = {0: 0, #Wrist
@@ -78,7 +78,7 @@ class Model(nn.Module):
         return frei_joints
 
 
-    def forward(self, images, Ks=None):
+    def forward(self, images, Ks=None, scale_gt=None):
         device = images.device
         # Use base_encoder to extract features
         low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
@@ -94,7 +94,7 @@ class Model(nn.Module):
         # }
 
         # Use nimble_layer to get 3D hand models
-        outputs = self.nimble_layer(hand_params)
+        outputs = self.nimble_layer(hand_params, handle_collision=False, scale_gt=scale_gt)
         # outputs = {
         #     'joints': bone_joints, # 25 joints
         #     'verts': skin_v, # 5990 verts
@@ -138,6 +138,6 @@ class Model(nn.Module):
             # if self.get_gt_depth and gt_verts is not None:
             #     gt_depth = self.renderer_NR(gt_verts, faces, mode='depth')
             #     gt_depth = gt_depth * (gt_depth < 1).float()#set 100 into 0
-            
+        outputs.update(hand_params)           
 
-        return outputs.update(hand_params)
+        return outputs

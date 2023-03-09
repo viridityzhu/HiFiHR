@@ -117,6 +117,10 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
+# VSC settings
+.vscode/*
+*.code-workspace
+
 # mkdocs documentation
 /site
 

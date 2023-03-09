@@ -41,6 +41,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'])
+        # outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scale'])
         
         # Projection transformation, project joints to 2D
         if 'joints' in outputs:

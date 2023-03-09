@@ -17,8 +17,8 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     # save 3d obj demo
     if skin_meshes is not None:
         demo_path = os.path.join(obj_output, 'demo_{:04d}_{:07d}.obj'.format(epoch, idx))
-        skin_v_smooth = skin_meshes[idx].verts_padded().detach().cpu().numpy()
-        save_textured_nimble(demo_path, skin_v_smooth, textures[idx])
+        skin_v_smooth = skin_meshes.verts_padded()[idx].detach().cpu().numpy()
+        save_textured_nimble(demo_path, skin_v_smooth, textures[idx].detach().cpu().numpy())
 
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}.png'.format(epoch, idx))
@@ -489,7 +489,16 @@ def displadic(obj_output, image_output, epoch, idx, examples, outputs, dat_name,
         opt_j2d = op_outputs['j2d']
         opt_img = op_outputs['re_img']
 
-        displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d_list[-1], masks, maskRGBs, None, joints,joints_gt,re_sil, re_img, re_depth,gt_depth,pc_gt_depth, pc_re_depth, skin_meshes=skin_meshes, textures=textures, opt_j2d = opt_j2d, opt_img=opt_img, dataset_name=dat_name, writer=writer, writer_tag=writer_tag, img_wise_save=img_wise_save, refhand=refhand, warphand = warphand)
+    displaydemo(obj_output=obj_output, image_output=image_output, epoch=epoch, 
+                idx=idx, vertices=vertices, faces=faces, imgs=imgs, j2d_gt=j2d_gt, 
+                open_2dj=open_2dj, j2d=j2d, hm_j2d=hm_j2d_list[-1], masks=masks, 
+                maskRGBs=maskRGBs, render_images=None, joints=joints, joints_gt=joints_gt,
+                skin_meshes=skin_meshes, textures=textures,
+                re_sil=re_sil, re_img=re_img, re_depth=re_depth, gt_depth=gt_depth,
+                pc_gt_depth=pc_gt_depth, pc_re_depth=pc_re_depth, obj_uv6 = None, 
+                opt_j2d = opt_j2d, opt_img=opt_img, 
+                dataset_name=dat_name, writer=writer, writer_tag=writer_tag, 
+                img_wise_save=img_wise_save, refhand=refhand, warphand = warphand)
     
     '''
     if op_outputs is not None:

@@ -24,13 +24,13 @@
     "render": false,
     "four_channel": false,
 
-    "lambda_j2d_gt": 0.0001,
-    "lambda_j3d": 100,
-    "lambda_scale": 100,
+    "lambda_j2d_gt": 0.000001,
+    "lambda_j3d": 0.0001,
+    "lambda_scale": 0.0001,
     "lambda_pose": 0.1,
 
 
-    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales", "trans_open_2dj"],
+    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales"],
     "val_queries": ["images","Ks"],
     "losses": ["joint_2d" , "joint_3d", "scale", "mpose"], 
     "train_requires": ["joints", "verts"],

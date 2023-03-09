@@ -100,9 +100,7 @@ def get_dataset(
                 )
             )
         else:
-            warnings.warn(
-                "Working wth subset of {} of size {}".format(dat_name, limit_size)
-            )
+            print( "Working wth subset of {} of size {}".format(dat_name, limit_size))
             dataset = Subset(dataset, list(range(limit_size)))
     return dataset
 
