@@ -41,7 +41,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'])
-        # outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scale'])
+        # outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scales'])
         
         # Projection transformation, project joints to 2D
         if 'joints' in outputs:
@@ -317,7 +317,7 @@ if __name__ == '__main__':
 
     if args.new_model:
         print("Using new model... Equipping Resnet and NIMBLE!!")
-        model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel)
+        model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel, hand_model=args.hand_model)
     else:
         model = models.Model(args=args)
     

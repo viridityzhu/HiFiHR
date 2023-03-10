@@ -51,7 +51,7 @@ class HandEncoder(nn.Module):
         Estimates:
             joints, verts, faces, theta, beta, scale, trans, rot, tsa_poses
     '''
-    def __init__(self, ncomps:list, in_dim=1024, use_mean_shape=False, ifRender=True):
+    def __init__(self, hand_model:str, ncomps:list, in_dim=1024, use_mean_shape=False, ifRender=True):
         super(HandEncoder, self).__init__()
         if use_mean_shape:
             print("use mean MANO shape")
@@ -60,6 +60,7 @@ class HandEncoder(nn.Module):
         self.use_mean_shape = use_mean_shape
         self.ifRender = ifRender
         self.shape_ncomp, self.pose_ncomp, self.tex_ncomp = ncomps
+        self.hand_model = hand_model
 
         # Base layers: in_dim -> 512
         base_layers = []
@@ -89,12 +90,13 @@ class HandEncoder(nn.Module):
         self.shape_reg.apply(weights_init)
 
         # Texture Layers: 512 -> 10
-        layers = []
-        layers.append(nn.Linear(512, 128))
-        layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Linear(128, self.tex_ncomp))
-        self.tex_reg = nn.Sequential(*layers)
-        self.tex_reg.apply(weights_init)
+        if hand_model == 'nimble':
+            layers = []
+            layers.append(nn.Linear(512, 128))
+            layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.Linear(128, self.tex_ncomp))
+            self.tex_reg = nn.Sequential(*layers)
+            self.tex_reg.apply(weights_init)
 
         # Trans layers: 512 -> 3
         layers = []
@@ -132,7 +134,7 @@ class HandEncoder(nn.Module):
         scale = self.scale_reg(base_features)
         trans = self.trans_reg(base_features)
         # rot = self.rot_reg(base_features)
-        if self.ifRender:
+        if self.ifRender and self.hand_model == 'nimble':
             texture_params = self.tex_reg(base_features)#shape
         else:
             texture_params = torch.zeros(bs, self.tex_ncomp).to(device)
