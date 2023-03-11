@@ -12,7 +12,7 @@ from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
 
 
 class Model(nn.Module):
-    def __init__(self, ifRender, device, if_4c, hand_model):
+    def __init__(self, ifRender, device, if_4c, hand_model, use_mean_shape):
         super(Model, self).__init__()
 
         self.features_dim = 1024 # for HRnet
@@ -25,7 +25,7 @@ class Model(nn.Module):
             self.ncomps = [10, 30, None] # shape, pose, no texture.
             self.nimble_layer = MyMANOLayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
             
-        self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender)
+        self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender, use_mean_shape=use_mean_shape)
 
 
         self.ifRender = ifRender
