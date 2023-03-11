@@ -11,8 +11,8 @@
     "lr_gamma": 0.5,
     "save_interval": 3,
     "controlled_exp": true,
-    "controlled_size": 10000,
-    "train_batch":64,
+    "controlled_size": 1000,
+    "train_batch":16,
     "val_batch":8,
     "num_workers":16,
     "if_test": false,
@@ -23,6 +23,7 @@
     "new_model": true,
     "render": false,
     "four_channel": false,
+    "hand_model": "nimble",
 
     "lambda_j2d_gt": 0.00000000001,
     "lambda_j3d": 1,

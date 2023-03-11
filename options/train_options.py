@@ -39,7 +39,7 @@ def get_parser():
 
     parser.add_argument('--regress_mode', type=str, default='mano',#check
                         help='hm2mano,mano')
-    parser.add_argument('--hand_model', type=list, default='mano', help='could be mano or nimble.')
+    parser.add_argument('--hand_model', type=str, default='mano', help='could be mano or nimble.')
     parser.add_argument('--renderer_mode', type=str, default='NR',
                         help='SoftRas,NR,opendr')
     parser.add_argument('--texture_mode', type=str, default='surf',help='pca, surf, same, nn_same, vert, html')             

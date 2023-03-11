@@ -7,6 +7,8 @@ import math
 import time
 
 from torch.autograd import Variable
+import pickle
+import numpy as np
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
 
@@ -68,21 +70,34 @@ class Model(nn.Module):
         # else:
         #     self.get_gt_depth = False
 
-    def jnts_map_nimble2frei(self, nimble_joints):#[b,25,3]
-        frei_joints = torch.zeros(nimble_joints.shape[0], 21, nimble_joints.shape[2]).to(nimble_joints.device) # init empty list
+    def jnts_map_nimble2frei(self, mano_verts):#[b,778,3]
 
-        # nimbleId, FreiId
-        mapping = {0: 0, #Wrist
-                1: 1, 2: 2, 3: 3, 4: 4, # Thumb
-                6: 5, 7: 6, 8: 7, 9: 8, #Index
-                11: 9, 12: 10, 13: 11, 14: 12, #Middle
-                16: 13, 17: 14, 18: 15, 19: 16, # Ring
-                21: 17, 22: 18, 23: 19, 24: 20, # Pinky
-                } 
+        batch_size = mano_verts.shape[0]
+        MANO_file = 'data/MANO_RIGHT.pkl'
+        dd = pickle.load(open(MANO_file, 'rb'),encoding='latin1')
+        J_regressor = Variable(torch.from_numpy(np.expand_dims(dd['J_regressor'].todense(), 0).astype(np.float32)).to(device=mano_verts.device))
+        # J_reg: [1, 16, 778]
+        # [b, 3, 778] x [b, 778, 16] -> [b, 3, 16]
+        Jtr = torch.matmul(mano_verts.permute(0,2,1), J_regressor.repeat(batch_size,1,1).permute(0,2,1))
+        Jtr = Jtr.permute(0, 2, 1) # b, 16, 3
 
-        for nimbleId, freiId in mapping.items():
-            frei_joints[:,freiId] = nimble_joints[:,nimbleId]
-        return frei_joints
+        # v is of shape: b, 3 (or more) dims, 778 samples
+        # For FreiHand: add 5 joints.
+        # Jtr.insert(4,mano_verts[:,:3,320].unsqueeze(2))
+        # Jtr.insert(8,mano_verts[:,:3,443].unsqueeze(2))
+        # Jtr.insert(12,mano_verts[:,:3,672].unsqueeze(2))
+        # Jtr.insert(16,mano_verts[:,:3,555].unsqueeze(2))
+        # Jtr.insert(20,mano_verts[:,:3,744].unsqueeze(2))      
+        Jtr = torch.cat([Jtr[:,:4], mano_verts[:,320].unsqueeze(1), Jtr[:,4:]], 1)
+        Jtr = torch.cat([Jtr[:,:8], mano_verts[:,443].unsqueeze(1), Jtr[:,8:]], 1)
+        Jtr = torch.cat([Jtr[:,:12], mano_verts[:,672].unsqueeze(1), Jtr[:,12:]], 1)
+        Jtr = torch.cat([Jtr[:,:16], mano_verts[:,555].unsqueeze(1), Jtr[:,16:]], 1)
+        Jtr = torch.cat([Jtr[:,:20], mano_verts[:,744].unsqueeze(1), Jtr[:,20:]], 1)
+        
+        # Jtr = torch.cat(Jtr, 2).permute(0,2,1)
+
+
+        return Jtr
 
 
     def forward(self, images, Ks=None, scale_gt=None):
@@ -113,7 +128,7 @@ class Model(nn.Module):
         # }
 
         # map nimble 25 joints to freihand 21 joints
-        outputs['joints'] = self.jnts_map_nimble2frei(outputs['joints'])
+        outputs['joints'] = self.jnts_map_nimble2frei(outputs['mano_verts'])
 
         if self.ifRender:
             pass

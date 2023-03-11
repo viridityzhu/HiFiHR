@@ -158,7 +158,7 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     Jtr = []
 
     for j_id in range(len(results_global)):
-        Jtr.append(results_global[j_id][:,:3,3:4])
+        Jtr.append(results_global[j_id][:,:3,3:4]) # b, 3, 1
 
     # Add finger tips from mesh to joint list    
     '''
