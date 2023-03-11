@@ -34,7 +34,7 @@ def load_model(model, args):
         elif 'hand_encoder' in state_dict.keys() and hasattr(model,'hand_encoder'):
             model.hand_encoder.load_state_dict(state_dict['hand_encoder'])
             print('load hand_encoder')
-        if 'nimble_layer' in state_dict.keys() and hasattr(model.module,'nimble_layer'):
+        if 'nimble_layer' in state_dict.keys() and hasattr(model,'nimble_layer'):
             model.nimble_layer.load_state_dict(state_dict['nimble_layer'])
             print('load nimble_layer')
         if 'heatmap_attention' in state_dict.keys() and hasattr(model,'heatmap_attention'):

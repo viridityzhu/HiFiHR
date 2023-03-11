@@ -23,6 +23,118 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}.png'.format(epoch, idx))
     fig = plt.figure()
+    ax1 = fig.add_subplot(241)
+    ax2 = fig.add_subplot(242, projection='3d')
+    ax3 = fig.add_subplot(243, projection='3d')
+    ax4 = fig.add_subplot(244)
+
+    ax5 = fig.add_subplot(245, projection='3d')
+    ax6 = fig.add_subplot(246, projection='3d')
+    ax7 = fig.add_subplot(247, projection='3d')
+    ax8 = fig.add_subplot(248)
+    
+    ax_font_size = 6
+    # 11 Image + GT 2D keypints
+    ax1.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+    ax1.set_title("Input Image", fontsize=ax_font_size)
+    ax1.axis('off')
+    if j2d_gt is not None:
+        uv = j2d_gt[0].detach().cpu().numpy()
+        plot_hand(ax1, uv, order='uv', dataset_name='FreiHand')
+
+
+    # 12 GT mask
+    # if masks is not None:
+    #     ax2.imshow(masks[0].cpu().permute(1,2,0).numpy())
+    #     ax2.set_title("GT mask", fontsize=ax_font_size)
+    # ax2.axis('off')
+    ax4.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+    if nimble_j2d is not None:
+        uv_out = nimble_j2d[0].detach().cpu().numpy()
+        #plot_hand(ax5, uv_out, order='uv', dataset_name=dataset_name)
+        plot_hand(ax4, uv_out, order='uv', dataset_name='nimble')
+    ax4.set_title("Pred nimble joints", fontsize=ax_font_size)
+    ax4.axis('off')
+
+
+    # 21 Image + output 2D keypints
+    ax8.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+    if j2d is not None:
+        uv_out = j2d[0].detach().cpu().numpy()
+        #plot_hand(ax8, uv_out, order='uv', dataset_name=dataset_name)
+        plot_hand(ax8, uv_out, order='uv')
+    ax8.set_title("Pred joints", fontsize=ax_font_size)
+    ax8.axis('off')
+
+
+    # 33 GT 3d Joints
+    lims = None
+    if joints_gt is not None:
+        j3d_gt = joints_gt[0].detach().cpu().numpy()
+        xlim_min = joints_gt[0,:,0].min()*1.25- joints_gt[0,:,0].max()*0.25
+        xlim_max = joints_gt[0,:,0].max()*1.25- joints_gt[0,:,0].min()*0.25
+        ylim_min = joints_gt[0,:,1].min()*1.25- joints_gt[0,:,1].max()*0.25
+        ylim_max = joints_gt[0,:,1].max()*1.25- joints_gt[0,:,1].min()*0.25
+        zlim_min = joints_gt[0,:,2].min()*1.25- joints_gt[0,:,2].max()*0.25
+        zlim_max = joints_gt[0,:,2].max()*1.25- joints_gt[0,:,2].min()*0.25
+        lims = [xlim_min.cpu().numpy(), xlim_max.cpu().numpy(), ylim_min.cpu().numpy(), ylim_max.cpu().numpy(), zlim_min.cpu().numpy(), zlim_max.cpu().numpy()]
+        #ax9=Axes3D(ax9)
+        plot_hand_3d(ax5, j3d_gt, order='xyz')
+        ax5.set_xlim(lims[0],lims[1])
+        ax5.set_ylim(lims[2],lims[3])
+        ax5.set_zlim3d(lims[4],lims[5])
+    ax5.set_title("GT 3D joints", fontsize=ax_font_size)
+
+    # 32 & 34 Output 3d joints
+    if joints is not None:
+        j3d_out = joints[0].detach().cpu().numpy()
+        plot_hand_3d(ax6, j3d_out, order='xyz')
+        if lims is not None:
+            ax6.set_xlim(lims[0],lims[1])
+            ax6.set_ylim(lims[2],lims[3])
+            ax6.set_zlim3d(lims[4],lims[5])
+        # 34 Output 3d joints
+        plot_hand_3d(ax2, j3d_out, order='xyz')
+    ax2.set_title("Pred 3D joints (full size)", fontsize=ax_font_size)
+    ax6.set_title("Pred 3D joints", fontsize=ax_font_size)
+
+    # 43 & 44 Output 3d nimble joints
+    if nimble_joints is not None:
+        j3d_out = nimble_joints[0].detach().cpu().numpy()
+        plot_hand_3d(ax7, j3d_out, order='xyz', dataset_name='nimble')
+        if lims is not None:
+            ax7.set_xlim(lims[0],lims[1])
+            ax7.set_ylim(lims[2],lims[3])
+            ax7.set_zlim3d(lims[4],lims[5])
+        # 34 Output 3d joints
+        plot_hand_3d(ax3, j3d_out, order='xyz', dataset_name='nimble')
+    ax3.set_title("Pred 3D nimble joints (full size)", fontsize=ax_font_size)
+    ax7.set_title("Pred 3D nimble joints", fontsize=ax_font_size)
+   
+
+    
+    file_str = os.path.join(image_output, '{:04d}_{:07d}.png'.format(epoch, idx))
+    #plt.tight_layout()
+    plt.savefig(file_str,dpi=800)
+
+    if writer is not None:
+        writer.add_figure(writer_tag, fig)
+
+    plt.close()
+    print("save image at:", file_str)
+    
+
+
+def displaydemo_full(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, nimble_j2d, masks, maskRGBs, render_images,joints,joints_gt, nimble_joints, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', img_wise_save=False, refhand=None, warphand=None):
+    # save 3d obj demo
+    if skin_meshes is not None:
+        demo_path = os.path.join(obj_output, 'demo_{:04d}_{:07d}.obj'.format(epoch, 0))
+        skin_v_smooth = skin_meshes.verts_padded()[0].detach().cpu().numpy()
+        save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy())
+
+    # save display img
+    file_str = os.path.join(image_output, '{:04d}_{:07d}.png'.format(epoch, idx))
+    fig = plt.figure()
     ax1 = fig.add_subplot(441)
     ax2 = fig.add_subplot(442)
     ax3 = fig.add_subplot(443)
@@ -229,7 +341,7 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     if refhand is not None:
         ax16.imshow(refhand[0].cpu().permute(1, 2, 0).numpy())
         ax16.set_title("ref hand image", fontsize=ax_font_size)
-    ax16.axis('off')
+        ax16.axis('off')
 
     
     # 34 output one side point cloud

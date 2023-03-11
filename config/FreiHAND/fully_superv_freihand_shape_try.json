@@ -6,13 +6,13 @@
     "is_write_tb": true,
     "writer_topic": "runs/freihand/new_model/", 
     "total_epochs": 120,
-    "init_lr": 0.0001,
-    "lr_steps": [30, 60, 90, 120, 150],
+    "init_lr": 0.0005,
+    "lr_steps": [20, 40, 60, 80, 100, 120, 150],
     "lr_gamma": 0.5,
     "save_interval": 3,
     "controlled_exp": true,
-    "controlled_size": 1000,
-    "train_batch":16,
+    "controlled_size": 10000,
+    "train_batch":64,
     "val_batch":8,
     "num_workers":16,
     "if_test": false,
@@ -26,10 +26,11 @@
     "hand_model": "nimble",
     "use_mean_shape": true,
 
-    "lambda_j2d_gt": 0.00000000001,
     "lambda_j3d": 1,
-    "lambda_scale": 1,
-    "lambda_pose": 0.1,
+    "lambda_pose": 0.03,
+
+    "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/new_model/model/texturehand_latest.t7",
+
 
 
     "train_queries": ["trans_images","trans_Ks","trans_joints", "scales"],
