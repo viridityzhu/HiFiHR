@@ -6,8 +6,6 @@ import os
 import math
 import time
 
-from torch.autograd import Variable
-import pickle
 import numpy as np
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer

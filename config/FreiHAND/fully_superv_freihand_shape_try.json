@@ -24,6 +24,7 @@
     "render": false,
     "four_channel": false,
     "hand_model": "nimble",
+    "use_mean_shape": true,
 
     "lambda_j2d_gt": 0.00000000001,
     "lambda_j3d": 1,

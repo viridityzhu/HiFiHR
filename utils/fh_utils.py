@@ -114,29 +114,33 @@ def plot_hand(axis, coords_hw, vis=None, color_fixed=None, linewidth='1', marker
         kp_colors = colors
     elif dataset_name == 'nimble':
         colors = np.array([[0.4, 0.4, 0.4],
-                        [0.4, 0.0, 0.0],
+                        [0.4, 0.0, 0.0], # thumb
                         [0.6, 0.0, 0.0],
                         [0.7, 0.0, 0.0],
                         [0.8, 0.0, 0.0],
-                        [1.0, 0.0, 0.0],
+
                         [0.4, 0.4, 0.0],
                         [0.6, 0.6, 0.0],
                         [0.7, 0.7, 0.0],
                         [0.8, 0.8, 0.0],
                         [1.0, 1.0, 0.0],
+
                         [0.0, 0.4, 0.2],
                         [0.0, 0.6, 0.3],
                         [0.0, 0.8, 0.4],
                         [0.0, 0.9, 0.5],
                         [0.0, 1.0, 0.6],
+
                         [0.0, 0.2, 0.4],
                         [0.0, 0.3, 0.6],
                         [0.0, 0.4, 0.8],
                         [0.0, 0.5, 0.9],
                         [0.0, 0.6, 1.0],
+
                         [0.4, 0.0, 0.4],
                         [0.5, 0.0, 0.5],
                         [0.6, 0.0, 0.6],
+                        [0.8, 0.0, 0.8],
                         [1.0, 0.0, 1.0],])
     
         colors = colors[:, ::-1]
@@ -290,7 +294,7 @@ def plot_hand(axis, coords_hw, vis=None, color_fixed=None, linewidth='1', marker
     if not draw_kp:
         return
 
-    for i in range(21):
+    for i in range(len(bones)):
         if vis[i] > 0.5:
             #axis.plot(coords_hw[i, 1], coords_hw[i, 0], 'o', color=colors[i, :])
             #import pdb;pdb.set_trace()
@@ -348,29 +352,33 @@ def plot_hand_3d(axis,xyz,vis=None, color_fixed=None, linewidth='1', order='hw',
              ((19, 20), colors[20, :])]
     if dataset_name == 'nimble':
         colors = np.array([[0.4, 0.4, 0.4],
-                        [0.4, 0.0, 0.0],
+                        [0.4, 0.0, 0.0], # thumb
                         [0.6, 0.0, 0.0],
                         [0.7, 0.0, 0.0],
                         [0.8, 0.0, 0.0],
-                        [1.0, 0.0, 0.0],
+
                         [0.4, 0.4, 0.0],
                         [0.6, 0.6, 0.0],
                         [0.7, 0.7, 0.0],
                         [0.8, 0.8, 0.0],
                         [1.0, 1.0, 0.0],
+
                         [0.0, 0.4, 0.2],
                         [0.0, 0.6, 0.3],
                         [0.0, 0.8, 0.4],
                         [0.0, 0.9, 0.5],
                         [0.0, 1.0, 0.6],
+
                         [0.0, 0.2, 0.4],
                         [0.0, 0.3, 0.6],
                         [0.0, 0.4, 0.8],
                         [0.0, 0.5, 0.9],
                         [0.0, 0.6, 1.0],
+
                         [0.4, 0.0, 0.4],
                         [0.5, 0.0, 0.5],
                         [0.6, 0.0, 0.6],
+                        [0.8, 0.0, 0.8],
                         [1.0, 0.0, 1.0],])
 
         colors = colors[:, ::-1]
@@ -423,7 +431,7 @@ def plot_hand_3d(axis,xyz,vis=None, color_fixed=None, linewidth='1', order='hw',
     if not draw_kp:
         return
 
-    for i in range(21):
+    for i in range(len(bones) + 1):
         if vis[i] > 0.5:
             #import pdb;pdb.set_trace()
             #axis.scatter([xyz[i, 0]], [xyz[i, 1]], [xyz[i, 2]], 'o', color=colors[i, :])

@@ -13,7 +13,7 @@ from data.dataset import get_dataset
 
 from utils.train_utils import *
 from utils.concat_dataloader import ConcatDataloader
-from utils.traineval_util import data_dic, save_2d_result,save_2d, mano_fitting, trans_proj_j2d, visualize, write_to_tb
+from utils.traineval_util import data_dic, save_2d_result,save_2d, mano_fitting, trans_proj_j2d, visualize, write_to_tb, Mano2Frei
 from utils.fh_utils import AverageMeter,EvalUtil
 
 
@@ -42,6 +42,11 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'])
         # outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scales'])
+
+        # ** gt positions are relative to wrist root.
+        examples['joints'] = examples['joints'] - examples['joints'][:, 0, :].unsqueeze(1)
+        # Mano joints map to Frei joints
+        outputs['joints'] = Mano2Frei(outputs['joints'])
         
         # Projection transformation, project joints to 2D
         if 'joints' in outputs:
