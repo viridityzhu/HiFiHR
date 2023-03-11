@@ -95,16 +95,20 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     #poses = torch.ones_like(poses)*1
     #poses = torch.cat((poses[:,:3].contiguous().view(batch_size,1,3),poses_),1)   
     poses = torch.cat((root_rot.repeat(batch_size,1).view(batch_size,1,3),poses),1) # [b,16,3]
+    # 网络预测的axis angle + hand_mean (rest pose), 再加上 root_rot(wrist的位置， 代码里面写为 (0,0,0), 是相对位置, 构造root-relative的结果). [bs, 16, 3]
 
+    # rest + Blend shape
     v_shaped =  (torch.matmul(betas.unsqueeze(1), 
                 mesh_pca.repeat(batch_size,1,1,1).permute(0,3,1,2).contiguous().view(batch_size,bases_num,-1)).squeeze(1)    
                 + mesh_mu.repeat(batch_size,1,1).view(batch_size, -1)).view(batch_size, mesh_num, 3)      
     
     pose_weights = get_poseweights(poses, batch_size)#[b,135]   
     
+    #  rest + Blend shape + blend shape
     v_posed = v_shaped + torch.matmul(posedirs.repeat(batch_size,1,1,1),
               (pose_weights.view(batch_size,1,(keypoints_num - 1)*9,1)).repeat(1,mesh_num,1,1)).squeeze(3)
 
+    # rest verts -> joints
     J_posed = torch.matmul(v_shaped.permute(0,2,1),J_regressor.repeat(batch_size,1,1).permute(0,2,1))
     J_posed = J_posed.permute(0, 2, 1)
     J_posed_split = [sp.contiguous().view(batch_size, 3) for sp in torch.split(J_posed.permute(1, 0, 2), 1, 0)]
@@ -132,6 +136,7 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
                          (J_posed_split[i] - J_posed_split[parent[i]]).view(batch_size,3,1)),2)) 
         results[i] = torch.matmul(results[parent[i]], tmp)
 
+    # 16个手指节点的 3D xyz. [(bs ,4, 4), (bs, 4, 4), … , (bs ,4, 4)].
     results_global = results
 
     results2 = []
@@ -147,6 +152,7 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     rest_shape_h = torch.cat((v_posed, Variable(torch.ones(batch_size,mesh_num,1).to(device=devices)) ), 2)  
     rest_shape_hs = torch.split(rest_shape_h, 1, 2)
 
+    # 经过蒙皮处理后的最终变形节点
     v = Ts[0].contiguous().view(batch_size, 4, mesh_num) * rest_shape_hs[0].contiguous().view(-1, 1, mesh_num)\
         + Ts[1].contiguous().view(batch_size, 4, mesh_num) * rest_shape_hs[1].contiguous().view(-1, 1, mesh_num)\
         + Ts[2].contiguous().view(batch_size, 4, mesh_num) * rest_shape_hs[2].contiguous().view(-1, 1, mesh_num)\
@@ -178,6 +184,7 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
      
     Jtr = torch.cat(Jtr, 2) #.permute(0,2,1)
     
+    # 再旋转 (根据root节点的旋转角)
     v = torch.matmul(Rots,v[:,:3,:]).permute(0,2,1) #.contiguous().view(batch_size,-1)
     Jtr = torch.matmul(Rots,Jtr).permute(0,2,1) #.contiguous().view(batch_size,-1)
     

@@ -62,7 +62,7 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     if nimble_j2d is not None:
         uv_out = nimble_j2d[0].detach().cpu().numpy()
         #plot_hand(ax5, uv_out, order='uv', dataset_name=dataset_name)
-        plot_hand(ax2, uv_out, order='uv')
+        plot_hand(ax2, uv_out, order='uv', dataset_name='nimble')
     ax2.set_title("Pred nimble joints", fontsize=ax_font_size)
     ax2.axis('off')
 
@@ -157,13 +157,13 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     # 43 & 44 Output 3d nimble joints
     if nimble_joints is not None:
         j3d_out = nimble_joints[0].detach().cpu().numpy()
-        plot_hand_3d(ax16, j3d_out, order='xyz')
+        plot_hand_3d(ax16, j3d_out, order='xyz', dataset_name='nimble')
         if lims is not None:
             ax16.set_xlim(lims[0],lims[1])
             ax16.set_ylim(lims[2],lims[3])
             ax16.set_zlim3d(lims[4],lims[5])
         # 34 Output 3d joints
-        plot_hand_3d(ax15, j3d_out, order='xyz')
+        plot_hand_3d(ax15, j3d_out, order='xyz', dataset_name='nimble')
     ax15.set_title("Pred 3D nimble joints (full size)", fontsize=ax_font_size)
     ax16.set_title("Pred 3D nimble joints", fontsize=ax_font_size)
    
