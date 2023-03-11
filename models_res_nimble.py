@@ -118,7 +118,7 @@ class Model(nn.Module):
         # Use nimble_layer to get 3D hand models
         outputs = self.nimble_layer(hand_params, handle_collision=False, scale_gt=scale_gt)
         # outputs = {
-        #     'joints': bone_joints, # 25 joints
+        #     'nimble_joints': bone_joints, # 25 joints
         #     'verts': skin_v, # 5990 verts
         #     'faces': faces,
         #     'skin_meshes': skin_v_smooth, # smoothed verts and faces

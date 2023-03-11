@@ -13,7 +13,7 @@ import os
 from utils.fh_utils import *
 from utils.NIMBLE_model.utils import save_textured_nimble
 
-def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, masks, maskRGBs, render_images,joints,joints_gt, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', img_wise_save=False, refhand=None, warphand=None):
+def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, nimble_j2d, masks, maskRGBs, render_images,joints,joints_gt, nimble_joints, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', img_wise_save=False, refhand=None, warphand=None):
     # save 3d obj demo
     if skin_meshes is not None:
         demo_path = os.path.join(obj_output, 'demo_{:04d}_{:07d}.obj'.format(epoch, 0))
@@ -37,11 +37,11 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     ax10 = fig.add_subplot(4,4,10, projection='3d')
     ax11 = fig.add_subplot(4,4,11, projection='3d')
     #ax11 = fig.add_subplot(4,4,11, projection='3d')
-    ax12 = fig.add_subplot(4,4,12)
+    ax12 = fig.add_subplot(4,4,12, projection='3d')
     ax13 = fig.add_subplot(4,4,13)
     ax14 = fig.add_subplot(4,4,14)
-    ax15 = fig.add_subplot(4,4,15)
-    ax16 = fig.add_subplot(4,4,16)
+    ax15 = fig.add_subplot(4,4,15, projection='3d')
+    ax16 = fig.add_subplot(4,4,16, projection='3d')
     
     ax_font_size = 6
     # 11 Image + GT 2D keypints
@@ -54,9 +54,16 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
 
 
     # 12 GT mask
-    if masks is not None:
-        ax2.imshow(masks[0].cpu().permute(1,2,0).numpy())
-        ax2.set_title("GT mask", fontsize=ax_font_size)
+    # if masks is not None:
+    #     ax2.imshow(masks[0].cpu().permute(1,2,0).numpy())
+    #     ax2.set_title("GT mask", fontsize=ax_font_size)
+    # ax2.axis('off')
+    ax2.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+    if nimble_j2d is not None:
+        uv_out = nimble_j2d[0].detach().cpu().numpy()
+        #plot_hand(ax5, uv_out, order='uv', dataset_name=dataset_name)
+        plot_hand(ax2, uv_out, order='uv')
+    ax2.set_title("Pred nimble joints", fontsize=ax_font_size)
     ax2.axis('off')
 
     # 13 GT maskRGB image
@@ -134,7 +141,7 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
         ax11.set_zlim3d(lims[4],lims[5])
     ax11.set_title("GT 3D joints", fontsize=ax_font_size)
 
-    # 32 Output 3d joints
+    # 32 & 34 Output 3d joints
     if joints is not None:
         j3d_out = joints[0].detach().cpu().numpy()
         plot_hand_3d(ax10, j3d_out, order='xyz')
@@ -142,8 +149,23 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
             ax10.set_xlim(lims[0],lims[1])
             ax10.set_ylim(lims[2],lims[3])
             ax10.set_zlim3d(lims[4],lims[5])
+        # 34 Output 3d joints
+        plot_hand_3d(ax12, j3d_out, order='xyz')
+    ax12.set_title("Pred 3D joints (full size)", fontsize=ax_font_size)
     ax10.set_title("Pred 3D joints", fontsize=ax_font_size)
-    
+
+    # 43 & 44 Output 3d nimble joints
+    if nimble_joints is not None:
+        j3d_out = nimble_joints[0].detach().cpu().numpy()
+        plot_hand_3d(ax16, j3d_out, order='xyz')
+        if lims is not None:
+            ax16.set_xlim(lims[0],lims[1])
+            ax16.set_ylim(lims[2],lims[3])
+            ax16.set_zlim3d(lims[4],lims[5])
+        # 34 Output 3d joints
+        plot_hand_3d(ax15, j3d_out, order='xyz')
+    ax15.set_title("Pred 3D nimble joints (full size)", fontsize=ax_font_size)
+    ax16.set_title("Pred 3D nimble joints", fontsize=ax_font_size)
    
     # 33 GT one side point cloud
     '''
@@ -174,7 +196,6 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     # 15 Image + object keypints
     
     # 34 not used
-    ax12.axis('off')
     
     # 41
     ax13.axis('off')
@@ -194,15 +215,15 @@ def displaydemo(obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d
     ax14.axis('off')
 
     # 43
-    if warphand is not None:
-        ax15.imshow(warphand[0].cpu().permute(1, 2, 0).numpy())
-        ax15.set_title("warp hand image", fontsize=ax_font_size)
-    ax15.axis('off')
+    # if warphand is not None:
+    #     ax15.imshow(warphand[0].cpu().permute(1, 2, 0).numpy())
+    #     ax15.set_title("warp hand image", fontsize=ax_font_size)
+    # ax15.axis('off')
 
-    if opt_img is not None:
-        ax15.imshow(opt_img[0].cpu().permute(1, 2, 0).numpy())
-        ax15.set_title("opt img", fontsize=ax_font_size)
-        ax15.axis('off')
+    # if opt_img is not None:
+    #     ax15.imshow(opt_img[0].cpu().permute(1, 2, 0).numpy())
+    #     ax15.set_title("opt img", fontsize=ax_font_size)
+    #     ax15.axis('off')
 
     # 44
     if refhand is not None:
@@ -467,6 +488,7 @@ def displadic(obj_output, image_output, epoch, idx, examples, outputs, dat_name,
     open_2dj = examples['open_2dj'] if 'open_2dj' in examples else None
     j2d_gt = examples['j2d_gt'] if 'j2d_gt' in examples else None
     j2d = outputs['j2d'] if 'j2d' in outputs else None
+    nimble_j2d = outputs['nimble_j2d'] if 'nimble_j2d' in outputs else None
     hm_j2d_list = outputs['hm_j2d_list'] if 'hm_j2d_list' in outputs else [None]
     masks = examples['masks'] if 'masks' in examples else None
     maskRGBs = outputs['maskRGBs'] if 'maskRGBs' in outputs else None
@@ -474,6 +496,7 @@ def displadic(obj_output, image_output, epoch, idx, examples, outputs, dat_name,
     re_img = outputs['re_img'] if 're_img' in outputs else None
     re_depth = outputs['re_depth'] if 're_depth' in outputs else None
     joints = outputs['joints'] if 'joints' in outputs else None
+    nimble_joints = outputs['nimble_joints'] if 'nimble_joints' in outputs else None
     joints_gt = examples['joints'] if 'joints' in examples else None
     gt_depth = examples['gt_depth'] if 'gt_depth' in examples else None
     pc_gt_depth = examples['pc_gt_depth'] if 'pc_gt_depth' in examples else None
@@ -491,9 +514,9 @@ def displadic(obj_output, image_output, epoch, idx, examples, outputs, dat_name,
 
     displaydemo(obj_output=obj_output, image_output=image_output, epoch=epoch, 
                 idx=idx, vertices=vertices, faces=faces, imgs=imgs, j2d_gt=j2d_gt, 
-                open_2dj=open_2dj, j2d=j2d, hm_j2d=hm_j2d_list[-1], masks=masks, 
+                open_2dj=open_2dj, j2d=j2d, hm_j2d=hm_j2d_list[-1], nimble_j2d=nimble_j2d, masks=masks, 
                 maskRGBs=maskRGBs, render_images=None, joints=joints, joints_gt=joints_gt,
-                skin_meshes=skin_meshes, textures=textures,
+                nimble_joints=nimble_joints, skin_meshes=skin_meshes, textures=textures,
                 re_sil=re_sil, re_img=re_img, re_depth=re_depth, gt_depth=gt_depth,
                 pc_gt_depth=pc_gt_depth, pc_re_depth=pc_re_depth, obj_uv6 = None, 
                 opt_j2d = opt_j2d, opt_img=opt_img, 

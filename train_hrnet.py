@@ -47,6 +47,8 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         if 'joints' in outputs:
             j2d = trans_proj_j2d(outputs, examples['Ks'])
             outputs.update({'j2d': j2d})
+            nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], which_joints='nimble_joints')
+            outputs.update({'nimble_j2d': nimble_j2d})
         
         # ===================================
         #      Compute and backward loss

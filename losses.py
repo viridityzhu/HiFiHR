@@ -236,10 +236,12 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
     # (used in full supervision) 3D joint loss & Bone scale loss: 3dj -> gt 3dj
     if 'joint_3d' in loss_used:
         assert 'joints' in outputs and 'joints' in examples, "Using open_2dj in losses, but joints or joints_gt are not provided."
-        joint_3d_loss = torch_f.mse_loss(outputs['joints'], examples['joints'])
+        # ** gt positions are relative to wrist root.
+        root_relative_joints = examples['joints'] - examples['joints'][:, 0, :].unsqueeze(1)
+        joint_3d_loss = torch_f.mse_loss(outputs['joints'], root_relative_joints)
         joint_3d_loss = args.lambda_j3d * joint_3d_loss
         loss_dic["joint_3d"] = joint_3d_loss
-        joint_3d_loss_norm = torch_f.mse_loss((outputs['joints']-outputs['joints'][:,9].unsqueeze(1)),(examples['joints']-examples['joints'][:,9].unsqueeze(1)))
+        joint_3d_loss_norm = torch_f.mse_loss((outputs['joints']-outputs['joints'][:,9].unsqueeze(1)),(root_relative_joints-root_relative_joints[:,9].unsqueeze(1)))
         joint_3d_loss_norm = args.lambda_j3d_norm * joint_3d_loss_norm
         loss_dic["joint_3d_norm"] = joint_3d_loss_norm
 

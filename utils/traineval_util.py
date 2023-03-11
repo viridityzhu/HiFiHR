@@ -297,12 +297,13 @@ def trans_proj(outputs, Ks_this, dat_name, is_ortho=False):
     return outputs, xyz_pred_list, verts_pred_list
 
 
-def trans_proj_j2d(outputs, Ks_this, is_ortho=False):
+def trans_proj_j2d(outputs, Ks_this, is_ortho=False, which_joints='joints'):
+    j3d = outputs[which_joints]
     if is_ortho:
-        proj_joints = orthographic_proj_withz(outputs['joints'], outputs['trans'], outputs['scale'])
+        proj_joints = orthographic_proj_withz(j3d, outputs['trans'], outputs['scale'])
         j2d = proj_joints[:, :, :2]
     else:    
-        j2d = proj_func(outputs['joints'], Ks_this)
+        j2d = proj_func(j3d, Ks_this)
     
     return j2d
 
