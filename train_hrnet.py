@@ -1,5 +1,7 @@
 import logging
 import os
+
+import numpy as np
 import models as models
 import models_res_nimble as models_new
 import torch
@@ -13,7 +15,7 @@ from data.dataset import get_dataset
 
 from utils.train_utils import *
 from utils.concat_dataloader import ConcatDataloader
-from utils.traineval_util import data_dic, save_2d_result,save_2d, mano_fitting, trans_proj_j2d, visualize, write_to_tb, Mano2Frei
+from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei
 from utils.fh_utils import AverageMeter,EvalUtil
 
 
@@ -31,7 +33,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
     
     evalutil = EvalUtil()
     xyz_pred_list, verts_pred_list = list(), list()
-    op_xyz_pred_list, op_verts_pred_list = list(), list()
+    # op_xyz_pred_list, op_verts_pred_list = list(), list()
     j2d_pred_ED_list,  j2d_proj_ED_list, j2d_detect_ED_list = list(), list(), list() 
 
     
@@ -86,6 +88,14 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # ================================
         #       print and save results
         # ================================
+        # save 3D pred joints
+        if not mode_train: # only save the pred results for evaluation
+            xyz_preds = outputs['joints'].cpu().detach().numpy()
+            xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
+            for i in xyz_preds:
+                xyz_pred_list.append(i.squeeze())
+            j3d_ED_list, j2d_ED_list = save_3d(examples, outputs) # Euclidean distances between each joint-pair
+            log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging)
         # save 2D results
         if args.save_2d:
             # square errors?
@@ -125,14 +135,14 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
     if dat_name == 'FreiHand' or dat_name == 'HO3D':
         if mode_train:
             pred_out_path = os.path.join(args.pred_output,'train',str(epoch))
-        else:
+        else: # for evaluation
             pred_out_path = os.path.join(args.pred_output,'test',str(epoch))
             if epoch%args.save_interval==0 and epoch>0:
                 os.makedirs(pred_out_path, exist_ok=True)
                 pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
                 dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
-                pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
-                dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
+                # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
+                # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
 

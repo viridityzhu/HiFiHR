@@ -194,7 +194,6 @@ def dump(pred_out_path, xyz_pred_list, verts_pred_list):
     # make sure its only lists
     xyz_pred_list = [x.tolist() for x in xyz_pred_list]
     verts_pred_list = [x.tolist() for x in verts_pred_list]
-    #import pdb; pdb.set_trace()
     # save to a json
     with open(pred_out_path, 'w') as fo:
         json.dump(

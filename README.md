@@ -6,6 +6,24 @@ This code is based on [S<sup>2</sup>HAND](https://github.com/TerenceCYJ/S2HAND).
 S<sup>2</sup>HAND presents a self-supervised 3D hand reconstruction network that can jointly estimate pose, shape, texture, and the camera viewpoint. Specifically, we obtain geometric cues from the input image through easily accessible 2D detected keypoints. To learn an accurate hand reconstruction model from these noisy geometric cues, we utilize the consistency between 2D and 3D representations and propose a set of novel losses to rationalize outputs of the neural network. For the first time, we demonstrate the feasibility of training an accurate 3D hand reconstruction network without relying on manual annotations. For more details, please see our [paper](https://arxiv.org/abs/2103.11703), [video](https://youtu.be/tuQzu-UfSe8), and [project page](https://terencecyj.github.io/projects/CVPR2021/index.html).
 
 ## Code
+
+### Environment (New)
+
+cuda11.7 python3.9 pytorch1.13.
+```sh
+conda env remove -n hand
+conda create -n hand python=3.9
+conda activate hand
+conda install pytorch=1.13.0 torchvision pytorch-cuda=11.7 -c pytorch -c nvidia
+
+conda install -c fvcore -c iopath -c conda-forge fvcore iopath
+# conda install pytorch3d -c pytorch3d
+pip install "git+https://github.com/facebookresearch/pytorch3d.git"
+
+conda install tqdm tensorboardX transforms3d scikit-image timm trimesh rtree opencv matplotlib
+pip install chumpy
+```
+
 ### Environment
 Training is implemented with PyTorch. This code was developed under Python 3.6 and Pytorch 1.1.
 I am using CUDA 10.2, so my environment is:

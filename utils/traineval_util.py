@@ -69,6 +69,17 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             idxs_con = ((idxs<32560).float()+1)/2
             texture_con = idxs_con.mul(texture_con)
             '''
+        if 'manos' in data_batch.keys():
+            manos = torch.squeeze(data_batch['manos'],1).cuda()#[b,61]
+            example_torch['manos'] = manos
+        if 'joints' in data_batch.keys():
+            joints = data_batch['joints'].cuda()#[b,21,3]
+            example_torch['joints'] = joints
+            j2d_gt = proj_func(joints, Ks)
+            example_torch['j2d_gt'] = j2d_gt
+        if 'verts' in data_batch.keys():
+            verts = data_batch['verts'].cuda()
+            example_torch['verts'] = verts
         if 'training' in set_name:
             if 'masks' in data_batch.keys():
                 masks = data_batch['masks'].cuda()#[b,3,224,224]
@@ -84,22 +95,11 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
                 segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
                 example_torch['segms_gt'] = segms_gt
             
-            if 'manos' in data_batch.keys():
-                manos = torch.squeeze(data_batch['manos'],1).cuda()#[b,61]
-                example_torch['manos'] = manos
-            if 'joints' in data_batch.keys():
-                joints = data_batch['joints'].cuda()#[b,21,3]
-                example_torch['joints'] = joints
-                j2d_gt = proj_func(joints, Ks)
-                example_torch['j2d_gt'] = j2d_gt
             if 'trans_joints' in data_batch.keys():
                 joints = data_batch['trans_joints'].cuda()#[b,21,3]
                 example_torch['joints'] = joints
                 j2d_gt = proj_func(joints, Ks)
                 example_torch['j2d_gt'] = j2d_gt
-            if 'verts' in data_batch.keys():
-                verts = data_batch['verts'].cuda()
-                example_torch['verts'] = verts
             if "trans_verts" in data_batch.keys():
                 verts = data_batch['trans_verts'].cuda()
                 example_torch['verts'] = verts
@@ -380,24 +380,26 @@ def save_2d(examples, outputs, epoch, args):
             j2d_detect_ED = detect_ED.cpu().detach().numpy().tolist()
     return j2d_pred_ED, j2d_proj_ED, j2d_detect_ED
 
-def save_3d(examples, outputs, j3d_ED_list, j2d_ED_list):
+def save_3d(examples, outputs):
+    j3d_ED_list, j2d_ED_list = None, None
     if 'joints' in examples and 'joints' in outputs:
         j3d_ED = torch.sqrt(torch.sum((examples['joints']-outputs['joints'])**2,2))#[8,21]
-        j3d_ED_list += j3d_ED.cpu().detach().numpy().tolist()
+        j3d_ED_list = j3d_ED.cpu().detach().numpy().tolist()
     if 'j2d_gt' in examples and 'j2d' in outputs:
         j2d_ED = torch.sqrt(torch.sum((examples['j2d_gt']-outputs['j2d'])**2,2))#[8,21]
-        j2d_ED_list += j2d_ED.cpu().detach().numpy().tolist()
+        j2d_ED_list = j2d_ED.cpu().detach().numpy().tolist()
     return j3d_ED_list, j2d_ED_list
 
-def log_3d_results(j3d_ED_list, j2d_ED_list, epoch, logging):
+def log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging):
     j3d_ED = np.asarray(j3d_ED_list)
-    j3d_per_joint = np.mean(j3d_ED,0)#[21]
+    # j3d_per_joint = np.mean(j3d_ED,0)#[21]
     j3d_mean =np.mean(j3d_ED)#[1]
     j2d_ED = np.asarray(j2d_ED_list)
-    j2d_per_joint = np.mean(j2d_ED,0)#[21]
+    # j2d_per_joint = np.mean(j2d_ED,0)#[21]
     j2d_mean =np.mean(j2d_ED)#[1]
     #logging.info("Epoch_{0}, Mean_j3d_error:{1}, Mean_j2d_error:{3}, Mean_per_j3d_error:{2}, Mean_per_j2d_error:{4}".format(epoch,j3d_mean,j3d_per_joint,j2d_mean,j2d_per_joint))
-    logging.info("Epoch_{0}, Mean_j3d_error:{1}, Mean_j2d_error:{2}".format(epoch, j3d_mean, j2d_mean))
+    trainOrEval = 'Training' if mode_train else 'Eval'
+    logging.info("{3} Epoch_{0}, Mean_j3d_error (MPJPE):{1}, Mean_j2d_error:{2}".format(epoch, j3d_mean, j2d_mean, trainOrEval))
 
 
 def visualize(mode_train,dat_name,epoch,idx_this,outputs,examples,args, op_outputs=None, writer=None, writer_tag='not-sure'):
@@ -405,11 +407,11 @@ def visualize(mode_train,dat_name,epoch,idx_this,outputs,examples,args, op_outpu
     if mode_train:
         if idx_this % args.demo_freq == 0:
             with torch.no_grad():
-                visualize_util.displadic(args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
     else:
         if idx_this % args.demo_freq_evaluation == 0:
             with torch.no_grad():
-                visualize_util.displadic(args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
             if args.img_wise_save:
                 visualize_util.multiview_render(args.image_output, outputs, epoch, idx_this)
                 if op_outputs is not None:

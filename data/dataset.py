@@ -1713,10 +1713,10 @@ class FreiHand:
             dataset_name = 'training'
         self.K_list = json_load(os.path.join(self.base_path, '%s_K.json' % dataset_name))
         self.scale_list = json_load(os.path.join(self.base_path, '%s_scale.json' % dataset_name))
+        self.mano_list = json_load(os.path.join(self.base_path, '%s_mano.json' % dataset_name))
+        self.joint_list = json_load(os.path.join(self.base_path, '%s_xyz.json' % dataset_name))
         
         if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':# only 32560
-            self.mano_list = json_load(os.path.join(self.base_path, '%s_mano.json' % dataset_name))
-            self.joint_list = json_load(os.path.join(self.base_path, '%s_xyz.json' % dataset_name))
             self.verts_list = []
             #self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % self.set_name))
             #self.open_2dj_lists = json_load('/data/FreiHand_save/debug/detect_all.json')
