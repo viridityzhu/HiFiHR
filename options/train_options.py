@@ -78,6 +78,7 @@ def get_parser():
                         help='num workers')
 
     parser.add_argument('--pretrain_segmnet', type=str, default=None)  
+    parser.add_argument('--pretrain', type=str, default='hr18sv2', help='hr18sv2, res18, res50')  
     #'/code/TextureHand/results/obman/model/seghandnet_29.t7'
     parser.add_argument('--pretrain_model', type=str, default=None)
     #parser.add_argument('--pretrain_model', type=str, default='/code/TextureHand/results/freihand/SSL//2d_3d_integral/model/texturehand_60.t7')

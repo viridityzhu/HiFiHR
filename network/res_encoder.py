@@ -21,10 +21,10 @@ class ResEncoder(nn.Module):
             self.encoder1.apply(weights_init)
             in_dim = 32
         elif pretrain=='res18':
-            self.encoder1 = Resnet_4C(pretrain)
+            self.encoder1 = Resnet_4C(pretrain, if_4c=if_4c)
             in_dim = 512 
         elif pretrain=='res50':
-            self.encoder1 = Resnet_4C(pretrain)
+            self.encoder1 = Resnet_4C(pretrain, if_4c=if_4c)
             in_dim = 2048 
         elif 'hr18' in pretrain:
             self.encoder1 = HRnet_4C(pretrain, if_4c=if_4c)
@@ -317,16 +317,17 @@ class UNet_4C(nn.Module):
 
 
 class Resnet_4C(nn.Module):
-    def __init__(self, pretrain):
+    def __init__(self, pretrain, if_4c=False):
         super(Resnet_4C, self).__init__()
         if pretrain == 'res50':
-            model = models.resnet50(pretrained=True)
+            model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
         else:
-            model = models.resnet18(pretrained=True)
-        weight = model.conv1.weight.clone()
-        model.conv1 = nn.Conv2d(4, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
-        model.conv1.weight.data[:, :3] = weight
-        model.conv1.weight.data[:, 3] = torch.mean(weight, dim=-1) * 0.1
+            model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        if if_4c:
+            weight = model.conv1.weight.clone()
+            model.conv1 = nn.Conv2d(4, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
+            model.conv1.weight.data[:, :3] = weight
+            model.conv1.weight.data[:, 3] = torch.mean(weight, dim=-1) * 0.1
 
         model.layer4[0].downsample[0].stride = (1,1)
         model.layer4[0].conv1.stride = (1,1)
@@ -340,8 +341,8 @@ class Resnet_4C(nn.Module):
         x = self.model.layer1(x)
         x = self.model.layer2(x)
         x = self.model.layer3(x)
-        x = self.model.layer4(x)
-        return x 
+        x = self.model.layer4(x) # b, 2048, 14, 14
+        return None, x 
 
 class HRnet_4C(nn.Module):
     def __init__(self, pretrain, if_4c=False):
