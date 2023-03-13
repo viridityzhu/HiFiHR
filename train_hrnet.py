@@ -89,7 +89,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         #       print and save results
         # ================================
         # save 3D pred joints
-        if not mode_train: # only save the pred results for evaluation
+        if args.save_3d or not mode_train: # only save the pred results for evaluation
             xyz_preds = outputs['joints'].cpu().detach().numpy()
             xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
             for i in xyz_preds:
@@ -135,6 +135,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
     if dat_name == 'FreiHand' or dat_name == 'HO3D':
         if mode_train:
             pred_out_path = os.path.join(args.pred_output,'train',str(epoch))
+            if args.save_3d:
+                os.makedirs(pred_out_path, exist_ok=True)
+                pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
+                dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
         else: # for evaluation
             pred_out_path = os.path.join(args.pred_output,'test',str(epoch))
             if epoch%args.save_interval==0 and epoch>0:
@@ -200,13 +204,22 @@ def train(base_path, set_name=None, writer = None):
             print("Training dataset size: {}".format(len(train_dat)))
             # Initialize train dataloader
             
+            # train_loader0 = torch.utils.data.DataLoader(
+            #     train_dat,
+            #     batch_size=args.train_batch,
+            #     shuffle=True,#check
+            #     num_workers=args.num_workers,
+            #     pin_memory=True,
+            #     drop_last=True,
+            # )
+            # This is only for generating pred.json and for evaluation the training metrics
             train_loader0 = torch.utils.data.DataLoader(
                 train_dat,
                 batch_size=args.train_batch,
-                shuffle=True,#check
+                shuffle=False,
                 num_workers=args.num_workers,
                 pin_memory=True,
-                drop_last=True,
+                drop_last=False,
             )
             train_loaders.append(train_loader0)
         train_loader = ConcatDataloader(train_loaders)

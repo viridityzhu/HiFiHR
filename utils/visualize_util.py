@@ -114,8 +114,6 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
    
 
     
-    file_str = os.path.join(image_output, '{:04d}_{:07d}.png'.format(epoch, idx))
-    #plt.tight_layout()
     plt.savefig(file_str,dpi=800)
 
     if writer is not None:

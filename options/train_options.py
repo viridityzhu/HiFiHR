@@ -149,6 +149,7 @@ def get_parser():
     parser.add_argument('--img_wise_save',type=bool,default=False)
     parser.add_argument('--test_refinement',type=bool,default=False)
     parser.add_argument('--save_2d',type=bool,default=False)
+    parser.add_argument('--save_3d',type=bool,default=False)
     
 
     parser.add_argument('--optimizer',type=str,default="Adam")#["Adam","AdamW"]
