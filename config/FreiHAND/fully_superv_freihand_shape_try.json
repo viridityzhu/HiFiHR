@@ -6,7 +6,7 @@
     "is_write_tb": true,
     "writer_topic": "runs/freihand/new_model/", 
     "total_epochs": 150,
-    "init_lr": 0.000005,
+    "init_lr": 0.0005,
     "lr_steps": [20, 40, 60, 80, 100, 120, 150],
     "lr_gamma": 0.5,
     "save_interval": 1,
@@ -36,7 +36,7 @@
 
     "train_queries": ["trans_images","trans_Ks","trans_joints", "scales"],
     "val_queries": ["images","Ks","joints", "scales"],
-    "losses": ["joint_3d", "mpose"], 
+    "losses": ["joint_3d"], 
     "train_requires": ["joints", "verts"],
     "test_requires": ["joints", "verts"],
     "task": "train",

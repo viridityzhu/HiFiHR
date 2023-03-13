@@ -27,7 +27,7 @@ def load_model(model, args):
             print('load encoder')
         elif 'base_encoder' in state_dict.keys() and hasattr(model,'base_encoder'):
             model.base_encoder.load_state_dict(state_dict['base_encoder'])
-            print('load encoder')
+            print('load base encoder')
         if 'decoder' in state_dict.keys() and hasattr(model,'hand_decoder'):
             model.hand_decoder.load_state_dict(state_dict['decoder'])
             print('load hand_decoder')
