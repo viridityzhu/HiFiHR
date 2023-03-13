@@ -300,7 +300,9 @@ def trans_proj(outputs, Ks_this, dat_name, is_ortho=False):
 def trans_proj_j2d(outputs, Ks_this, scales=None, is_ortho=False, root_xyz=None, which_joints='joints'):
     j3d = outputs[which_joints]
     if root_xyz is not None and scales is not None:
-        scales = scales.unsqueeze(1).expand(j3d.shape[0], j3d.shape[1]).unsqueeze(2).repeat(1,1,3).to(j3d.device)
+        cal_scale = torch.norm(outputs['joints'][:, 9] - outputs['joints'][:, 10], dim=-1) # metric length of a reference bone
+        scales = scales.to(j3d.device) / cal_scale
+        scales = scales.unsqueeze(1).expand(j3d.shape[0], j3d.shape[1]).unsqueeze(2).repeat(1,1,3)
         j3d = j3d * scales
         j3d = j3d + root_xyz# recover the camera view coord
     if is_ortho:
