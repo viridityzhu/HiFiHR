@@ -74,7 +74,8 @@ class Model(nn.Module):
     def forward(self, images, Ks=None, scale_gt=None):
         device = images.device
         # Use base_encoder to extract features
-        low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
+        # low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
+        _, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
         
         # Use hand_encoder to get hand parameters
         hand_params  = self.hand_encoder(features)

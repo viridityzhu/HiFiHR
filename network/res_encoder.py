@@ -41,9 +41,10 @@ class ResEncoder(nn.Module):
         x = self.norm_func(x) 
         #################### Backbone
         #with torch.no_grad():
-        low_features, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+        # low_features, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+        _, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
         features = self.mmpool(features).view(features.shape[0], -1) # [b, 1024, 7, 7] -> [b, 1024, 1, 1] -> [b, 1024]
-        return low_features, features 
+        return _, features 
 
 
 class HandEncoder(nn.Module):
@@ -346,11 +347,11 @@ class HRnet_4C(nn.Module):
     def __init__(self, pretrain, if_4c=False):
         super(HRnet_4C, self).__init__()
         if pretrain == 'hr18':
-            model = timm.create_model('hrnet_w18', pretrained=True, features_only=True, out_indices=[3,4])
+            model = timm.create_model('hrnet_w18', pretrained=True, features_only=True, out_indices=[4]) # out_indices=[3,4])
         elif pretrain == 'hr18sv2':
-            model = timm.create_model('hrnet_w18_small_v2', pretrained=True, features_only=True, out_indices=[3,4]) #  2: [b, 256, 28, 28] = 200704, 3: [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+            model = timm.create_model('hrnet_w18_small_v2', pretrained=True, features_only=True, out_indices=[4]) #  2: [b, 256, 28, 28] = 200704, 3: [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
         elif pretrain == 'hr18sv1':
-            model = timm.create_model('hrnet_w18_small', pretrained=True, features_only=True, out_indices=[3,4])
+            model = timm.create_model('hrnet_w18_small', pretrained=True, features_only=True, out_indices=[4])
         if if_4c:
             # weight initialization: the weight of the 4th channel of the first layer is the mean of the weight.
             weight = model.conv1.weight.clone()
@@ -359,8 +360,9 @@ class HRnet_4C(nn.Module):
             model.conv1.weight.data[:, 3] = torch.mean(weight, dim=-1)  #model.conv1.weight[:, 0]
         self.model = model
     def forward(self, x):
-        low_features, features = self.model(x) # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
-        return low_features, features 
+        # low_features, features = self.model(x) # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+        features = self.model(x) # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+        return None, features[0] 
 
 class ResBlock(nn.Module):
     def __init__(self, dim, norm='bn', activation='lrelu', padding_mode='zeros', res_type='basic'):
