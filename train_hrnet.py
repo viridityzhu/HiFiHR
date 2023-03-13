@@ -1,5 +1,7 @@
 import logging
 import os
+from rich import print
+from rich.console import Console
 
 import numpy as np
 import models as models
@@ -19,6 +21,7 @@ from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2
 from utils.fh_utils import AverageMeter,EvalUtil
 
 
+console = Console()
 def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, requires, args, writer=None):
     if mode_train:
         model.train()
@@ -40,6 +43,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
     for idx, (sample) in enumerate(train_loader):
         # Get batch data
         examples = data_dic(sample, dat_name, set_name, args)
+        del sample
         
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'])
@@ -100,6 +104,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 xyz_pred_list.append(i.squeeze())
             j3d_ED_list, j2d_ED_list = save_3d(examples, outputs) # Euclidean distances between each joint-pair
             log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging)
+            del j3d_ED_list, j2d_ED_list 
         # save 2D results
         if args.save_2d:
             # square errors?
@@ -110,22 +115,22 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         # Save visualization and print information
         batch_time.update(time.time() - end)
-        visualize(mode_train, dat_name, epoch, idx, outputs, examples, args, writer=writer, writer_tag=set_name)
+        visualize(mode_train, dat_name, epoch, idx, outputs, examples, args, writer=writer, writer_tag=set_name, console=console)
         # Print information
         if idx % args.print_freq == 0:
             if optimizer is not None:
                 lr_current = optimizer.param_groups[0]['lr']
             else:
                 lr_current = 0
-            print('Epoch: {0}\t'
+            console.log('Epoch: {0}\t'
                 'Iter: [{1}/{2}]\t'
                 'Time {batch_time.val:.3f}\t'
-                'Loss {loss:.5f}\t'
+                '[bold red]Loss {loss:.5f}[/bold red]\t'
                 'dataset: {dataset:6}\t'
                 'lr {lr:.7f}\t'.format(epoch, idx, len(train_loader),
                                         batch_time=batch_time, loss=loss.data.item(), dataset=dat_name,
                                         lr=lr_current))
-            print(f"Loss backward:\t{', '.join(['{0}:{1:6f}'.format(loss_item,loss_data.sum()) for loss_item,loss_data in loss_dic.items() if (loss_item in loss_used)])}")
+            console.log(f"Loss backward:\t{', '.join(['{0}: {1:6f}'.format(loss_item,loss_data.sum()) for loss_item,loss_data in loss_dic.items() if (loss_item in loss_used)])}")
 
             #print("Loss all:\t",['{0}:{1:6f};'.format(loss_item, loss_dic[loss_item].sum().data.item()) for loss_item in loss_dic])
             #print("j3d loss:{0:.4f}; j2d loss:{1:.4f};shape loss:{2:.6f}; pose loss:{3:.6f}; render loss:{4:.6f}; sil loss:{5:.6f}; depth loss:{6:.5f}; render ssim loss:{7:.5f}; depth ssim loss:{8:.5f}; open j2d loss:{9:.5f}; mesh tex std:{10:.10f}; scale loss:{11:.5f}; bone direct loss:{12:.5f}; laplacian loss:{13:.6f}; hm loss:{14:.6f}; kp consistency loss:{15:.6f}; percep loss:{16:.6f}".format(joint_3d_loss.data.item(),joint_2d_loss.data.item(), shape_loss.data.item(),pose_loss.data.item(),texture_loss.data.item(), silhouette_loss.data.item(), depth_loss.data.item(), loss_ssim_tex.data.item(), loss_ssim_depth.data.item(), open_2dj_loss.data.item(), textures_reg.data.item(), mscale_loss.data.item(), open_bone_direc_loss.data.item(),triangle_loss.data.item(),hm_loss.data.item(),kp_cons_loss.data.item(),loss_percep.data.item()))
@@ -163,117 +168,118 @@ def train(base_path, set_name=None, writer = None):
     # ==============================
     #        prepare dataset
     # ==============================
-    assert set_name is not None, "Mode is not provided. Should be training or evaluation."
+    with console.status("Preparing dataset...", spinner="bounce"):
+        assert set_name is not None, "Mode is not provided. Should be training or evaluation."
 
-    if 'training' in set_name:
-        # initialize train datasets
-        train_loaders = []
-        if args.controlled_exp:
-            # Use subset of datasets so that final dataset size is constant
-            limit_size = int(args.controlled_size / len(args.train_datasets))
-        else:
-            limit_size = None
-        for dat_name in args.train_datasets:# iteration = min(dataset_len)/batch_size; go each dataset at a batchsize
-            if dat_name == 'FreiHand':
-                if len(args.train_queries_frei)>0:
-                    train_queries = args.train_queries_frei
-                else:
+        if 'training' in set_name:
+            # initialize train datasets
+            train_loaders = []
+            if args.controlled_exp:
+                # Use subset of datasets so that final dataset size is constant
+                limit_size = int(args.controlled_size / len(args.train_datasets))
+            else:
+                limit_size = None
+            for dat_name in args.train_datasets:# iteration = min(dataset_len)/batch_size; go each dataset at a batchsize
+                if dat_name == 'FreiHand':
+                    if len(args.train_queries_frei)>0:
+                        train_queries = args.train_queries_frei
+                    else:
+                        train_queries = args.train_queries
+                    base_path = args.freihand_base_path
+                elif dat_name == 'RHD':
+                    if len(args.train_queries_rhd)>0:
+                        train_queries = args.train_queries_rhd
+                    else:
+                        train_queries = args.train_queries
+                    base_path = args.rhd_base_path
+                elif (dat_name == 'Obman') or (dat_name == 'Obman_hand'):
                     train_queries = args.train_queries
+                elif dat_name == 'HO3D':
+                    if len(args.train_queries_ho3d)>0:
+                        train_queries = args.train_queries_ho3d
+                    else:
+                        train_queries = args.train_queries
+                    base_path = args.ho3d_base_path
+                
+                train_dat = get_dataset(
+                    dat_name,
+                    'training',#set_name,
+                    base_path,
+                    queries = train_queries,
+                    train = True,
+                    limit_size=limit_size,
+                    if_use_j2d = args.four_channel
+                    #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
+                )
+                print("Training dataset size: {}".format(len(train_dat)))
+                # Initialize train dataloader
+                
+                train_loader0 = torch.utils.data.DataLoader(
+                    train_dat,
+                    batch_size=args.train_batch,
+                    shuffle=True,#check
+                    num_workers=args.num_workers,
+                    pin_memory=True,
+                    drop_last=True,
+                )
+                # This is only for generating pred.json and for evaluation the training metrics
+                # train_loader0 = torch.utils.data.DataLoader(
+                #     train_dat,
+                #     batch_size=args.train_batch,
+                #     shuffle=False,
+                #     num_workers=args.num_workers,
+                #     pin_memory=True,
+                #     drop_last=False,
+                # )
+                train_loaders.append(train_loader0)
+            train_loader = ConcatDataloader(train_loaders)
+        #if 'evaluation' in set_name:
+        val_loaders = []
+        for dat_name_val in args.val_datasets:
+            if dat_name_val == 'FreiHand':
+                val_queries = args.val_queries
                 base_path = args.freihand_base_path
-            elif dat_name == 'RHD':
-                if len(args.train_queries_rhd)>0:
-                    train_queries = args.train_queries_rhd
-                else:
-                    train_queries = args.train_queries
+            elif dat_name_val == 'RHD':
+                val_queries = args.val_queries
                 base_path = args.rhd_base_path
-            elif (dat_name == 'Obman') or (dat_name == 'Obman_hand'):
-                train_queries = args.train_queries
-            elif dat_name == 'HO3D':
-                if len(args.train_queries_ho3d)>0:
-                    train_queries = args.train_queries_ho3d
-                else:
-                    train_queries = args.train_queries
+            elif dat_name_val == 'HO3D':
+                val_queries = args.val_queries
                 base_path = args.ho3d_base_path
-            
-            train_dat = get_dataset(
-                dat_name,
-                'training',#set_name,
+            val_dat = get_dataset(
+                dat_name_val,
+                'evaluation',
                 base_path,
-                queries = train_queries,
-                train = True,
-                limit_size=limit_size,
-                if_use_j2d = args.four_channel
+                queries = val_queries,
+                train = False,
                 #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
             )
-            print("Training dataset size: {}".format(len(train_dat)))
-            # Initialize train dataloader
-            
-            train_loader0 = torch.utils.data.DataLoader(
-                train_dat,
-                batch_size=args.train_batch,
-                shuffle=True,#check
+            print("Validation dataset size: {}".format(len(val_dat)))
+            val_loader = torch.utils.data.DataLoader(
+                val_dat,
+                batch_size=args.val_batch,
+                shuffle=False,
                 num_workers=args.num_workers,
                 pin_memory=True,
-                drop_last=True,
+                drop_last=False,
             )
-            # This is only for generating pred.json and for evaluation the training metrics
-            # train_loader0 = torch.utils.data.DataLoader(
-            #     train_dat,
-            #     batch_size=args.train_batch,
-            #     shuffle=False,
-            #     num_workers=args.num_workers,
-            #     pin_memory=True,
-            #     drop_last=False,
-            # )
-            train_loaders.append(train_loader0)
-        train_loader = ConcatDataloader(train_loaders)
-    #if 'evaluation' in set_name:
-    val_loaders = []
-    for dat_name_val in args.val_datasets:
-        if dat_name_val == 'FreiHand':
-            val_queries = args.val_queries
-            base_path = args.freihand_base_path
-        elif dat_name_val == 'RHD':
-            val_queries = args.val_queries
-            base_path = args.rhd_base_path
-        elif dat_name_val == 'HO3D':
-            val_queries = args.val_queries
-            base_path = args.ho3d_base_path
-        val_dat = get_dataset(
-            dat_name_val,
-            'evaluation',
-            base_path,
-            queries = val_queries,
-            train = False,
-            #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
-        )
-        print("Validation dataset size: {}".format(len(val_dat)))
-        val_loader = torch.utils.data.DataLoader(
-            val_dat,
-            batch_size=args.val_batch,
-            shuffle=False,
-            num_workers=args.num_workers,
-            pin_memory=True,
-            drop_last=False,
-        )
-        val_loaders.append(val_loader)
-    val_loader = ConcatDataloader(val_loaders)
+            val_loaders.append(val_loader)
+        val_loader = ConcatDataloader(val_loaders)
 
-    #current_epoch = 0
-    if len(args.train_datasets) == 1:
-        dat_name = args.train_datasets[0]#dat_name
-    else:
-        dat_name = args.train_datasets
-    
-    # for saving visualization outputs
-    if 'training' in set_name:
-        args.obj_output = os.path.join(args.obj_output,'train')
-        args.image_output = os.path.join(args.image_output, 'train')
-    else:
-        args.obj_output = os.path.join(args.obj_output,'test')
-        args.image_output = os.path.join(args.image_output, 'test')
-    os.makedirs(args.obj_output, exist_ok=True)
-    os.makedirs(args.image_output, exist_ok=True)
+        #current_epoch = 0
+        if len(args.train_datasets) == 1:
+            dat_name = args.train_datasets[0]#dat_name
+        else:
+            dat_name = args.train_datasets
+        
+        # for saving visualization outputs
+        if 'training' in set_name:
+            args.obj_output = os.path.join(args.obj_output,'train')
+            args.image_output = os.path.join(args.image_output, 'train')
+        else:
+            args.obj_output = os.path.join(args.obj_output,'test')
+            args.image_output = os.path.join(args.image_output, 'test')
+        os.makedirs(args.obj_output, exist_ok=True)
+        os.makedirs(args.image_output, exist_ok=True)
 
     # =======================================
     #         Training loop
@@ -285,26 +291,27 @@ def train(base_path, set_name=None, writer = None):
             optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
 
-        for epoch in range(1, args.total_epochs+1):
-            mode_train = True
-            requires = args.train_requires
-            args.train_batch = args.train_batch
-            train_an_epoch(mode_train, dat_name, epoch + current_epoch, train_loader, model, optimizer, requires, args, writer)
-            torch.cuda.empty_cache()
-            
-            # save model and test
-            if (epoch + current_epoch) % args.save_interval == 0:
-                if args.if_test:
-                    # test
-                    mode_train = False
-                    requires = args.test_requires
-                    args.train_batch = args.val_batch
-                    print('For test part:')
-                    train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
-                    torch.cuda.empty_cache()
+        with console.status("Training...", spinner="monkey") as status:
+            for epoch in range(1, args.total_epochs+1):
+                status.update(status="Training...", spinner="monkey")
+                mode_train = True
+                requires = args.train_requires
+                args.train_batch = args.train_batch
+                train_an_epoch(mode_train, dat_name, epoch + current_epoch, train_loader, model, optimizer, requires, args, writer)
+                torch.cuda.empty_cache()
 
-                save_model(model,optimizer,epoch,current_epoch, args)
-            scheduler.step()
+                status.update(status="[bold yellow] Testing...", spinner="weather")
+                if (epoch + current_epoch) % args.save_interval == 0:
+                # save model and test
+                    if args.if_test:
+                        # test
+                        mode_train = False
+                        requires = args.test_requires
+                        args.train_batch = args.val_batch
+                        train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
+                        torch.cuda.empty_cache()
+                    save_model(model,optimizer,epoch,current_epoch, args, console=console)
+                scheduler.step()
     elif 'evaluation' in set_name:
         mode_train = False
         requires = args.test_requires

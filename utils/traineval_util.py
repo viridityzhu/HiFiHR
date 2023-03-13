@@ -408,16 +408,16 @@ def log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging):
     logging.info("{3} Epoch_{0}, Mean_j3d_error (MPJPE):{1}, Mean_j2d_error:{2}".format(epoch, j3d_mean, j2d_mean, trainOrEval))
 
 
-def visualize(mode_train,dat_name,epoch,idx_this,outputs,examples,args, op_outputs=None, writer=None, writer_tag='not-sure'):
+def visualize(mode_train,dat_name,epoch,idx_this,outputs,examples,args, op_outputs=None, writer=None, writer_tag='not-sure', console=None):
     # save images
     if mode_train:
         if idx_this % args.demo_freq == 0:
             with torch.no_grad():
-                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, console=console, img_wise_save=args.img_wise_save)
     else:
         if idx_this % args.demo_freq_evaluation == 0:
             with torch.no_grad():
-                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, console=console, img_wise_save=args.img_wise_save)
             if args.img_wise_save:
                 visualize_util.multiview_render(args.image_output, outputs, epoch, idx_this)
                 if op_outputs is not None:

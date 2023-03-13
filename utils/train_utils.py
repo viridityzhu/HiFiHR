@@ -6,6 +6,8 @@ import time
 from tensorboardX import SummaryWriter
 from datetime import datetime
 import logging
+from rich import print
+
 
 def load_model(model, args):
     current_epoch = 0
@@ -90,7 +92,7 @@ def load_model(model, args):
     return model, current_epoch
 
 
-def save_model(model,optimizer,epoch,current_epoch, args):
+def save_model(model,optimizer,epoch,current_epoch, args, console=None):
     state = {
         'args': args,
         'optimizer': optimizer.state_dict(),
@@ -105,7 +107,7 @@ def save_model(model,optimizer,epoch,current_epoch, args):
     if args.task == 'segm_train':
         state['seghandnet'] = model.module.seghandnet.state_dict()
         save_file = os.path.join(args.state_output, f'seghandnet_{postfix}.t7')
-        print("Save model at:", save_file)
+        print("[grey]Save model at:", save_file, "[/grey]")
         torch.save(state, save_file)
     elif args.task == 'train':
         if hasattr(model.module,'encoder'):
@@ -148,7 +150,7 @@ def save_model(model,optimizer,epoch,current_epoch, args):
                 state['light_estimator'] = model.module.light_estimator.state_dict()
                 print("save light estimator")
         save_file = os.path.join(args.state_output, f'texturehand_{postfix}.t7')
-        print("Save model at:", save_file)
+        console.log(f"[bold grey]Save model at {save_file}[/bold grey]")
         torch.save(state, save_file)
     elif args.task == 'hm_train':
         state['rgb2hm'] = model.module.rgb2hm.state_dict()
@@ -201,7 +203,7 @@ def dump(pred_out_path, xyz_pred_list, verts_pred_list):
                 xyz_pred_list,
                 verts_pred_list
             ], fo)
-    print('Dumped %d joints and %d verts predictions to %s' % (len(xyz_pred_list), len(verts_pred_list), pred_out_path))
+    print('[grey]Dumped %d joints and %d verts predictions to %s[/grey]' % (len(xyz_pred_list), len(verts_pred_list), pred_out_path))
 
 
 
