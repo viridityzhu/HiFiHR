@@ -50,10 +50,11 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scales'])
 
         # ** positions are relative to wrist root.
-        root_xyz = examples['joints'][:, 0, :].unsqueeze(1)
+        ROOT = 9
+        root_xyz = examples['joints'][:, ROOT, :].unsqueeze(1)
         examples['joints'] = examples['joints'] - root_xyz
-        outputs['joints'] = outputs['joints'] - outputs['joints'][:, 0, :].unsqueeze(1)
-        outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, 0, :].unsqueeze(1)
+        outputs['joints'] = outputs['joints'] - outputs['joints'][:, ROOT, :].unsqueeze(1)
+        outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, ROOT, :].unsqueeze(1)
 
         # Mano joints map to Frei joints
         outputs['joints'] = Mano2Frei(outputs['joints'])
@@ -213,24 +214,25 @@ def train(base_path, set_name=None, writer = None):
                 )
                 print("Training dataset size: {}".format(len(train_dat)))
                 # Initialize train dataloader
-                
-                train_loader0 = torch.utils.data.DataLoader(
-                    train_dat,
-                    batch_size=args.train_batch,
-                    shuffle=True,#check
-                    num_workers=args.num_workers,
-                    pin_memory=True,
-                    drop_last=True,
-                )
                 # This is only for generating pred.json and for evaluation the training metrics
-                # train_loader0 = torch.utils.data.DataLoader(
-                #     train_dat,
-                #     batch_size=args.train_batch,
-                #     shuffle=False,
-                #     num_workers=args.num_workers,
-                #     pin_memory=True,
-                #     drop_last=False,
-                # )
+                if args.save_3d:
+                    train_loader0 = torch.utils.data.DataLoader(
+                        train_dat,
+                        batch_size=args.train_batch,
+                        shuffle=False,
+                        num_workers=args.num_workers,
+                        pin_memory=True,
+                        drop_last=False,
+                    )
+                else:
+                    train_loader0 = torch.utils.data.DataLoader(
+                        train_dat,
+                        batch_size=args.train_batch,
+                        shuffle=True,
+                        num_workers=args.num_workers,
+                        pin_memory=True,
+                        drop_last=True,
+                    )
                 train_loaders.append(train_loader0)
             train_loader = ConcatDataloader(train_loaders)
         #if 'evaluation' in set_name:
