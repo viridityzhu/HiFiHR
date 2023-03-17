@@ -76,7 +76,9 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     weights = Variable(torch.from_numpy(np.expand_dims(dd['weights'], 0).astype(np.float32)).to(device=devices))
     hands_components = Variable(torch.from_numpy(np.expand_dims(np.vstack(dd['hands_components'][:pose_num]), 0).astype(np.float32)).to(device=devices))
     hands_mean = Variable(torch.from_numpy(np.expand_dims(dd['hands_mean'], 0).astype(np.float32)).to(device=devices))
-    root_rot = Variable(torch.FloatTensor([np.pi,0.,0.]).unsqueeze(0).to(device=devices))
+    # root_rot = Variable(torch.FloatTensor([0.,0.,0.]).unsqueeze(0).to(device=devices))
+    # root_rot = Variable(torch.FloatTensor([np.pi,0.,0.]).unsqueeze(0).to(device=devices))
+    root_rot = rots.unsqueeze(1)
 
     mesh_face = Variable(torch.from_numpy(np.expand_dims(dd['f'],0).astype(np.int16)).to(device=devices))
     
@@ -84,7 +86,6 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     batch_size = rots.size(0)   
 
     mesh_face = mesh_face.repeat(batch_size, 1, 1)
-    poses = (hands_mean + torch.matmul(poses.unsqueeze(1), hands_components).squeeze(1)).view(batch_size,keypoints_num-1,3)
     # [b,15,3] [0:3]index [3:6]mid [6:9]pinky [9:12]ring [12:15]thumb
 
 
@@ -92,30 +93,37 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     #rots = torch.zeros_like(rots); rots[:,0]=np.pi/2
 
 
+    # 1. pose = mean + aa
+    # 网络预测的axis angle + hand_mean (rest pose), 
+    # 再加上 root_rot(wrist的位置，代码里面写为 (0,0,0), 是相对位置, 构造root-relative的结果). [bs, 16, 3]
+
     #poses = torch.ones_like(poses)*1
     #poses = torch.cat((poses[:,:3].contiguous().view(batch_size,1,3),poses_),1)   
-    poses = torch.cat((root_rot.repeat(batch_size,1).view(batch_size,1,3),poses),1) # [b,16,3]
-    # 网络预测的axis angle + hand_mean (rest pose), 再加上 root_rot(wrist的位置， 代码里面写为 (0,0,0), 是相对位置, 构造root-relative的结果). [bs, 16, 3]
+    poses = (hands_mean + torch.matmul(poses.unsqueeze(1), hands_components).squeeze(1)).view(batch_size,keypoints_num-1,3)
+    # poses = torch.cat((root_rot.repeat(batch_size,1).view(batch_size,1,3),poses),1) # [b,16,3]
+    poses = torch.cat((root_rot,poses),1) # [b,16,3]
 
+    # 2. shape: rest + blend
     # rest + Blend shape
     v_shaped =  (torch.matmul(betas.unsqueeze(1), 
                 mesh_pca.repeat(batch_size,1,1,1).permute(0,3,1,2).contiguous().view(batch_size,bases_num,-1)).squeeze(1)    
                 + mesh_mu.repeat(batch_size,1,1).view(batch_size, -1)).view(batch_size, mesh_num, 3)      
     
+    # rest + Blend shape + blend pose
     pose_weights = get_poseweights(poses, batch_size)#[b,135]   
-    
-    #  rest + Blend shape + blend shape
     v_posed = v_shaped + torch.matmul(posedirs.repeat(batch_size,1,1,1),
               (pose_weights.view(batch_size,1,(keypoints_num - 1)*9,1)).repeat(1,mesh_num,1,1)).squeeze(3)
 
+    # 3. regress joints from verts
     # rest verts -> joints
-    J_posed = torch.matmul(v_shaped.permute(0,2,1),J_regressor.repeat(batch_size,1,1).permute(0,2,1))
+    J_posed = torch.matmul(v_shaped.permute(0,2,1), J_regressor.repeat(batch_size,1,1).permute(0,2,1))
     J_posed = J_posed.permute(0, 2, 1)
     J_posed_split = [sp.contiguous().view(batch_size, 3) for sp in torch.split(J_posed.permute(1, 0, 2), 1, 0)]
          
     pose = poses.permute(1, 0, 2)
     pose_split = torch.split(pose, 1, 0)
 
+    # 4. rotate the joints aa
     angle_matrix =[]
     for i in range(keypoints_num):
         out, tmp = rodrigues(pose_split[i].contiguous().view(-1, 3))
@@ -124,7 +132,7 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     #with_zeros = lambda x: torch.cat((x,torch.FloatTensor([[[0.0, 0.0, 0.0, 1.0]]]).repeat(batch_size,1,1)),1)
 
     with_zeros = lambda x:\
-        torch.cat((x,   Variable(torch.FloatTensor([[[0.0, 0.0, 0.0, 1.0]]]).repeat(batch_size,1,1).to(device=devices))  ),1)
+        torch.cat((x, Variable(torch.FloatTensor([[[0.0, 0.0, 0.0, 1.0]]]).repeat(batch_size,1,1).to(device=devices))  ),1)
 
     pack = lambda x: torch.cat((Variable(torch.zeros(batch_size,4,3).to(device=devices)),x),2) 
 
@@ -160,7 +168,7 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
    
     #v = v.permute(0,2,1)[:,:,:3] 
     # v: b, 4, 778 mesh_num
-    Rots = rodrigues(rots)[0]
+    # Rots = rodrigues(rots)[0]
     Jtr = []
 
     for j_id in range(len(results_global)):
@@ -185,8 +193,10 @@ def rot_pose_beta_to_mesh(rots, poses, betas):
     Jtr = torch.cat(Jtr, 2) #.permute(0,2,1)
     
     # 再旋转 (根据root节点的旋转角)
-    v = torch.matmul(Rots,v[:,:3,:]).permute(0,2,1) #.contiguous().view(batch_size,-1)
-    Jtr = torch.matmul(Rots,Jtr).permute(0,2,1) #.contiguous().view(batch_size,-1)
+    # v = torch.matmul(Rots,v[:,:3,:]).permute(0,2,1) #.contiguous().view(batch_size,-1)
+    # Jtr = torch.matmul(Rots,Jtr).permute(0,2,1) #.contiguous().view(batch_size,-1)
+    v = v[:,:3,:].permute(0,2,1)
+    Jtr = Jtr.permute(0,2,1)
     
     #return torch.cat((Jtr,v), 1)
     return torch.cat((Jtr,v), 1), mesh_face, poses

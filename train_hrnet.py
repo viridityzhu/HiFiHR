@@ -51,21 +51,23 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # Mano joints map to Frei joints
         outputs['joints'] = Mano2Frei(outputs['joints'])
 
-        # ** positions are relative to wrist root.
+        # ** positions are relative to ~~wrist~~ middle root.
         ROOT = 9
         ROOT_NIMBLE = 11
         root_xyz = examples['joints'][:, ROOT, :].unsqueeze(1)
         examples['joints'] = examples['joints'] - root_xyz
         outputs['joints'] = outputs['joints'] - outputs['joints'][:, ROOT, :].unsqueeze(1)
-        outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, ROOT_NIMBLE, :].unsqueeze(1)
+        if args.hand_model == 'nimble':
+            outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, ROOT_NIMBLE, :].unsqueeze(1)
 
         
         # Projection transformation, project joints to 2D
         if 'joints' in outputs:
             j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz)
             outputs.update({'j2d': j2d})
-            nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
-            outputs.update({'nimble_j2d': nimble_j2d})
+            if args.hand_model == 'nimble':
+                nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
+                outputs.update({'nimble_j2d': nimble_j2d})
         
         # ===================================
         #      Compute and backward loss

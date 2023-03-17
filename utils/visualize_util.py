@@ -21,7 +21,8 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
         if skin_meshes is not None:
             demo_path = os.path.join(obj_output, 'demo{}_{:04d}_{:07d}.obj'.format(evalName, epoch, 0))
             skin_v_smooth = skin_meshes.verts_padded()[0].detach().cpu().numpy()
-            save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy(), console=console)
+            # save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy(), console=console)
+            save_textured_nimble(demo_path, skin_v_smooth, console=console)
 
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}{}.png'.format(epoch, idx, evalName))

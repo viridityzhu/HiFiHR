@@ -112,13 +112,14 @@ class HandEncoder(nn.Module):
         self.trans_reg.apply(weights_init)
 
         # # rot layers: 512 -> 3
-        # layers = []
-        # layers.append(nn.Linear(512, 128))
-        # layers.append(nn.ReLU(inplace=True))
-        # layers.append(nn.Linear(128, 32))
-        # layers.append(nn.Linear(32, 3))
-        # self.rot_reg = nn.Sequential(*layers)
-        # self.rot_reg.apply(weights_init)
+        if hand_model == 'mano':
+            layers = []
+            layers.append(nn.Linear(512, 128))
+            layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.Linear(128, 32))
+            layers.append(nn.Linear(32, 3))
+            self.rot_reg = nn.Sequential(*layers)
+            self.rot_reg.apply(weights_init)
 
         # scale layers: 512 -> 1
         layers = []
@@ -137,11 +138,16 @@ class HandEncoder(nn.Module):
         pose_params = self.pose_reg(base_features)#pose
         scale = self.scale_reg(base_features)
         trans = self.trans_reg(base_features)
-        # rot = self.rot_reg(base_features)
+        if self.hand_model == 'mano':
+            rot = self.rot_reg(base_features)
+        else:
+            rot = None
         if self.ifRender and self.hand_model == 'nimble':
             texture_params = self.tex_reg(base_features)#shape
-        else:
+        elif self.hand_model == 'nimble':
             texture_params = torch.zeros(bs, self.tex_ncomp).to(device)
+        else:
+            texture_params = None
             
         if self.use_mean_shape:
             shape_params = torch.zeros(bs, self.shape_ncomp).to(device)
@@ -154,7 +160,7 @@ class HandEncoder(nn.Module):
             'texture_params': texture_params, 
             'scale': scale, 
             'trans': trans, 
-            # 'rot':rot
+            'rot':rot
         }
 
 class LightEstimator(nn.Module):

@@ -9,6 +9,7 @@ import time
 import numpy as np
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
+from utils.my_mano import MyMANOLayer
 
 
 class Model(nn.Module):
@@ -23,10 +24,10 @@ class Model(nn.Module):
 
         if hand_model == 'nimble':
             self.ncomps = [20, 30, 10] # shape, pose, tex respectively.
-            self.nimble_layer = MyNIMBLELayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
+            self.hand_layer = MyNIMBLELayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
         elif hand_model == 'mano':
             self.ncomps = [10, 30, None] # shape, pose, no texture.
-            self.nimble_layer = MyMANOLayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
+            self.hand_layer = MyMANOLayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
             
         self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender, use_mean_shape=use_mean_shape)
 
@@ -88,10 +89,11 @@ class Model(nn.Module):
         #     'texture_params': texture_params, 
         #     'scale': scale, 
         #     'trans': trans, 
+        #     'rot': rot # only for mano hand model
         # }
 
         # Use nimble_layer to get 3D hand models
-        outputs = self.nimble_layer(hand_params, handle_collision=False)
+        outputs = self.hand_layer(hand_params, handle_collision=False)
         # outputs = {
         #     'nimble_joints': bone_joints, # 25 joints
         #     'verts': skin_v, # 5990 verts
