@@ -47,17 +47,18 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'])
-        # outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scales'])
-
-        # ** positions are relative to wrist root.
-        ROOT = 9
-        root_xyz = examples['joints'][:, ROOT, :].unsqueeze(1)
-        examples['joints'] = examples['joints'] - root_xyz
-        outputs['joints'] = outputs['joints'] - outputs['joints'][:, ROOT, :].unsqueeze(1)
-        outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, ROOT, :].unsqueeze(1)
 
         # Mano joints map to Frei joints
         outputs['joints'] = Mano2Frei(outputs['joints'])
+
+        # ** positions are relative to wrist root.
+        ROOT = 9
+        ROOT_NIMBLE = 11
+        root_xyz = examples['joints'][:, ROOT, :].unsqueeze(1)
+        examples['joints'] = examples['joints'] - root_xyz
+        outputs['joints'] = outputs['joints'] - outputs['joints'][:, ROOT, :].unsqueeze(1)
+        outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, ROOT_NIMBLE, :].unsqueeze(1)
+
         
         # Projection transformation, project joints to 2D
         if 'joints' in outputs:
