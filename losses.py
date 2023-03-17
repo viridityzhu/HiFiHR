@@ -66,6 +66,7 @@ def loss_func(examples, outputs, loss_used, dat_name, args) -> dict:
         joint_3d_loss = torch_f.mse_loss(outputs['joints'], examples['joints'])
         joint_3d_loss = args.lambda_j3d * joint_3d_loss
         loss_dic["joint_3d"] = joint_3d_loss
+        # relative
         joint_3d_loss_norm = torch_f.mse_loss((outputs['joints']-outputs['joints'][:,9].unsqueeze(1)),(examples['joints']-examples['joints'][:,9].unsqueeze(1)))
         joint_3d_loss_norm = args.lambda_j3d_norm * joint_3d_loss_norm
         loss_dic["joint_3d_norm"] = joint_3d_loss_norm

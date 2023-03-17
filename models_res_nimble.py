@@ -17,7 +17,7 @@ class Model(nn.Module):
 
         if pretrain == 'hr18sv2':
             self.features_dim = 1024 # for HRnet
-        elif pretrain in ['res18', 'res50']:
+        elif pretrain in ['res18', 'res50', 'res101']:
             self.features_dim = 2048
         self.base_encoder = ResEncoder(pretrain=pretrain, if_4c=if_4c)
 
@@ -91,7 +91,7 @@ class Model(nn.Module):
         # }
 
         # Use nimble_layer to get 3D hand models
-        outputs = self.nimble_layer(hand_params, handle_collision=False, scale_gt=scale_gt)
+        outputs = self.nimble_layer(hand_params, handle_collision=False)
         # outputs = {
         #     'nimble_joints': bone_joints, # 25 joints
         #     'verts': skin_v, # 5990 verts

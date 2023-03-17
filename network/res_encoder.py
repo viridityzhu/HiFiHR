@@ -26,6 +26,9 @@ class ResEncoder(nn.Module):
         elif pretrain=='res50':
             self.encoder1 = Resnet_4C(pretrain, if_4c=if_4c)
             in_dim = 2048 
+        elif pretrain=='res101':
+            self.encoder1 = Resnet_4C(pretrain, if_4c=if_4c)
+            in_dim = 2048 
         elif 'hr18' in pretrain:
             self.encoder1 = HRnet_4C(pretrain, if_4c=if_4c)
             in_dim = 2048 
@@ -321,8 +324,10 @@ class Resnet_4C(nn.Module):
         super(Resnet_4C, self).__init__()
         if pretrain == 'res50':
             model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
-        else:
+        elif pretrain == 'res18':
             model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        elif pretrain == 'res101':
+            model = models.resnet101(weights = models.ResNet101_Weights.DEFAULT)
         if if_4c:
             weight = model.conv1.weight.clone()
             model.conv1 = nn.Conv2d(4, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
