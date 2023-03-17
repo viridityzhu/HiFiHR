@@ -16,11 +16,12 @@ from utils.NIMBLE_model.utils import save_textured_nimble
 
 def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, nimble_j2d, masks, maskRGBs, render_images,joints,joints_gt, nimble_joints, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', console=None, img_wise_save=False, refhand=None, warphand=None):
     evalName = '_eval' if not mode_train else ''
-    # save 3d obj demo
-    if skin_meshes is not None:
-        demo_path = os.path.join(obj_output, 'demo{}_{:04d}_{:07d}.obj'.format(evalName, epoch, 0))
-        skin_v_smooth = skin_meshes.verts_padded()[0].detach().cpu().numpy()
-        save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy(), console=console)
+    if int(idx) == 0:
+        # save 3d obj demo
+        if skin_meshes is not None:
+            demo_path = os.path.join(obj_output, 'demo{}_{:04d}_{:07d}.obj'.format(evalName, epoch, 0))
+            skin_v_smooth = skin_meshes.verts_padded()[0].detach().cpu().numpy()
+            save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy(), console=console)
 
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}{}.png'.format(epoch, idx, evalName))
