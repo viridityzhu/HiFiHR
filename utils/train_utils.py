@@ -11,6 +11,7 @@ from rich import print
 
 def load_model(model, args):
     current_epoch = 0
+    optimizer, scheduler = None, None
     
     #import pdb; pdb.set_trace()
     if args.pretrain_segmnet is not None:
@@ -75,6 +76,8 @@ def load_model(model, args):
         print('loading the model from:', args.pretrain_model)
         logging.info('pretrain_model: %s' %args.pretrain_model)
         current_epoch = state_dict['epoch']
+        optimizer = state_dict['optimizer']
+        scheduler = state_dict['scheduler']
 
         if hasattr(model,'texture_light_from_low') and args.pretrain_texture_model is not None:
             texture_state_dict = torch.load(args.pretrain_texture_model)
@@ -89,14 +92,15 @@ def load_model(model, args):
         print('load rgb2hm')
         print('loading the rgb2hm model from:', args.pretrain_rgb2hm)
     #import pdb; pdb.set_trace()
-    return model, current_epoch
+    return model, current_epoch, optimizer, scheduler
 
 
-def save_model(model,optimizer,epoch,current_epoch, args, console=None):
+def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=None):
     state = {
         'args': args,
         'optimizer': optimizer.state_dict(),
         'epoch': epoch + current_epoch,
+        'scheduler': scheduler,
         #'core': model.core.state_dict(),
     }
     if args.save_mode == 'separately':

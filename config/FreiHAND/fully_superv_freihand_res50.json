@@ -28,7 +28,7 @@
     "use_mean_shape": true,
 
     "lambda_j3d": 10,
-    "lambda_pose": 0.0001,
+    "lambda_pose": 0.00001,
 
     "pretrain": "res50",
     "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/res50/model/texturehand_latest.t7",

@@ -164,7 +164,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
 
 
-def train(base_path, set_name=None, writer = None):
+def train(base_path, set_name=None, writer = None, optimizer = None, scheduler = None):
     """
         Main loop: Iterates over all evaluation samples and saves the corresponding predictions.
     """
@@ -290,14 +290,16 @@ def train(base_path, set_name=None, writer = None):
     #         Training loop
     # =======================================
     if 'training' in set_name:
-        if args.optimizer == "Adam":
-            optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
-        if args.optimizer == "AdamW":
-            optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
+        if optimizer is None:
+            if args.optimizer == "Adam":
+                optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
+            elif args.optimizer == "AdamW":
+                optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
+        if scheduler is None:
+            scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
 
         with console.status("Training...", spinner="monkey") as status:
-            for epoch in range(1, args.total_epochs+1):
+            for epoch in range(1, args.total_epochs + 1 - current_epoch):
                 status.update(status="Training...", spinner="monkey")
                 mode_train = True
                 requires = args.train_requires
@@ -315,8 +317,13 @@ def train(base_path, set_name=None, writer = None):
                         args.train_batch = args.val_batch
                         train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
                         torch.cuda.empty_cache()
-                    save_model(model,optimizer,epoch,current_epoch, args, console=console)
+                    save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=console)
                 scheduler.step()
+
+                # step the lambda...
+                for i, lambda_pose_step in enumerate(args.lambda_pose_steps):
+                    if lambda_pose_step == epoch + current_epoch:
+                        args.lambda_pose = args.lambda_pose_list[i + 1]
     elif 'evaluation' in set_name:
         mode_train = False
         requires = args.test_requires
@@ -344,6 +351,7 @@ if __name__ == '__main__':
     
     args = train_options.make_output_dir(args)
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    args.lambda_pose = args.lambda_pose_list[0]
 
     if args.is_write_tb:
         log_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
@@ -367,7 +375,7 @@ if __name__ == '__main__':
     else:
         model = models.Model(args=args)
     
-    model, current_epoch = load_model(model, args)
+    model, current_epoch, optimizer, scheduler = load_model(model, args)
 
     model = nn.DataParallel(model.cuda())
 
@@ -379,6 +387,8 @@ if __name__ == '__main__':
         args.base_path,
         set_name=args.mode,
         writer = writer,
+        optimizer = optimizer,
+        scheduler = scheduler
     )
     if writer is not None:
         writer.close()
