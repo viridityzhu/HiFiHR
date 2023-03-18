@@ -102,10 +102,15 @@ def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=Non
         'scheduler': scheduler.state_dict(),
         #'core': model.core.state_dict(),
     }
+    save_file2 = None
     if args.save_mode == 'separately':
         postfix = epoch + current_epoch
     elif args.save_mode == 'only_latest':
         postfix = 'latest'
+    if (epoch + current_epoch) % 20 == 0:
+        save_file2 = os.path.join(args.state_output, f'texturehand_{epoch + current_epoch}.t7')
+
+        
         
     if args.task == 'segm_train':
         state['seghandnet'] = model.module.seghandnet.state_dict()
@@ -153,8 +158,11 @@ def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=Non
                 state['light_estimator'] = model.module.light_estimator.state_dict()
                 print("save light estimator")
         save_file = os.path.join(args.state_output, f'texturehand_{postfix}.t7')
-        console.log(f"[bold grey]Save model at {save_file}[/bold grey]")
+        console.log(f"[bold green]Save model at {save_file}")
         torch.save(state, save_file)
+        if save_file2 is not None:
+            torch.save(state, save_file2)
+            
     elif args.task == 'hm_train':
         state['rgb2hm'] = model.module.rgb2hm.state_dict()
         save_file = os.path.join(args.state_output, f'handhm_{postfix}.t7')
