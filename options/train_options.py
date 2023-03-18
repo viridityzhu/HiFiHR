@@ -104,7 +104,9 @@ def get_parser():
     parser.add_argument('--lambda_silhouette', type=float, default=0.005)#0.1
     parser.add_argument('--lambda_mask', type=float, default=1)#1
     parser.add_argument('--lambda_j2d', type=float, default=1e-3)#0.001
-    parser.add_argument('--lambda_j2d_gt', type=float, default=1e-4)#0.001
+    parser.add_argument('--lambda_j2d_gt_list', type=list, default=[0.00001])#0.001
+    parser.add_argument('--lambda_j2d_gt_steps', type=list, default=[])#0.001
+    # parser.add_argument('--lambda_j2d_gt', type=float, default=1e-4)#0.001
     parser.add_argument('--lambda_j2d_de', type=float, default=1e-4)#0.001
     parser.add_argument('--lambda_j3d', type=float, default=100)#100
     parser.add_argument('--lambda_j3d_norm', type=float, default=100)

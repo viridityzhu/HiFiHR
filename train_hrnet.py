@@ -290,13 +290,6 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
     #         Training loop
     # =======================================
     if 'training' in set_name:
-        if optimizer is None:
-            if args.optimizer == "Adam":
-                optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
-            elif args.optimizer == "AdamW":
-                optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
-        if scheduler is None:
-            scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
 
         with console.status("Training...", spinner="monkey") as status:
             for epoch in range(1, args.total_epochs + 1 - current_epoch):
@@ -324,6 +317,9 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                 for i, lambda_pose_step in enumerate(args.lambda_pose_steps):
                     if lambda_pose_step == epoch + current_epoch:
                         args.lambda_pose = args.lambda_pose_list[i + 1]
+                for i, lambda_j2d_gt_step in enumerate(args.lambda_j2d_gt_steps):
+                    if lambda_j2d_gt_step == epoch + current_epoch:
+                        args.lambda_j2d_gt = args.lambda_j2d_gt_list[i + 1]
     elif 'evaluation' in set_name:
         mode_train = False
         requires = args.test_requires
@@ -352,6 +348,7 @@ if __name__ == '__main__':
     args = train_options.make_output_dir(args)
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.lambda_pose = args.lambda_pose_list[0]
+    args.lambda_j2d_gt = args.lambda_j2d_gt_list[0]
 
     if args.is_write_tb:
         log_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
@@ -374,10 +371,17 @@ if __name__ == '__main__':
         model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel, hand_model=args.hand_model, use_mean_shape=args.use_mean_shape, pretrain=args.pretrain)
     else:
         model = models.Model(args=args)
-    
-    model, current_epoch, optimizer, scheduler = load_model(model, args)
-
     model = nn.DataParallel(model.cuda())
+    
+    if 'training' in args.mode:
+        if args.optimizer == "Adam":
+            optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
+        elif args.optimizer == "AdamW":
+            optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
+    
+    model, current_epoch, optimizer, scheduler = load_model(model, optimizer, scheduler, args)
+
 
     # Optionally freeze parts of the network
     freeze_model_modules(model, args)

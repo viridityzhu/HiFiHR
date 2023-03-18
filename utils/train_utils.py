@@ -9,9 +9,8 @@ import logging
 from rich import print
 
 
-def load_model(model, args):
+def load_model(model,optimizer,scheduler, args):
     current_epoch = 0
-    optimizer, scheduler = None, None
     
     #import pdb; pdb.set_trace()
     if args.pretrain_segmnet is not None:
@@ -22,7 +21,7 @@ def load_model(model, args):
         print('loading the model from:', args.pretrain_segmnet)
         logging.info('pretrain_segmentation_model: %s' %args.pretrain_segmnet)
     if args.pretrain_model is not None:
-        state_dict = torch.load(args.pretrain_model)
+        state_dict = torch.load(args.pretrain_model, map_location=args.device)
         #import pdb; pdb.set_trace()
         # dir(model)
         if 'encoder' in state_dict.keys() and hasattr(model,'encoder'):
@@ -76,8 +75,8 @@ def load_model(model, args):
         print('loading the model from:', args.pretrain_model)
         logging.info('pretrain_model: %s' %args.pretrain_model)
         current_epoch = state_dict['epoch']
-        optimizer = state_dict['optimizer']
-        scheduler = state_dict['scheduler']
+        optimizer.load_state_dict(state_dict['optimizer'])
+        scheduler.load_state_dict(state_dict['scheduler'])
 
         if hasattr(model,'texture_light_from_low') and args.pretrain_texture_model is not None:
             texture_state_dict = torch.load(args.pretrain_texture_model)
@@ -100,7 +99,7 @@ def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=Non
         'args': args,
         'optimizer': optimizer.state_dict(),
         'epoch': epoch + current_epoch,
-        'scheduler': scheduler,
+        'scheduler': scheduler.state_dict(),
         #'core': model.core.state_dict(),
     }
     if args.save_mode == 'separately':

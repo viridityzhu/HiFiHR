@@ -32,6 +32,7 @@
     "lambda_pose_list": [0.01, 0.001, 0.00001],
 
     "pretrain": "res101",
+    "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/baseline/model/texturehand_latest.t7",
 
 
 
