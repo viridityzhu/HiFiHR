@@ -126,14 +126,18 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 lr_current = optimizer.param_groups[0]['lr']
             else:
                 lr_current = 0
-            console.log('Epoch: {0}\t'
+            if not mode_train:
+                prefix_test = '[bold yellow]Test [/bold yellow]'
+            else:
+                prefix_test = ''
+            console.log('{prefix_test}Epoch: {0}\t'
                 'Iter: [{1}/{2}]\t'
                 'Time {batch_time.val:.3f}\t'
                 '[bold red]Loss {loss:.5f}[/bold red]\t'
                 'dataset: {dataset:6}\t'
                 'lr {lr:.7f}\t'.format(epoch, idx, len(train_loader),
                                         batch_time=batch_time, loss=loss.data.item(), dataset=dat_name,
-                                        lr=lr_current))
+                                        lr=lr_current, prefix_test=prefix_test))
             console.log(f"Loss backward:\t{', '.join(['{0}: {1:6f}'.format(loss_item,loss_data.sum()) for loss_item,loss_data in loss_dic.items() if (loss_item in loss_used)])}")
 
             #print("Loss all:\t",['{0}:{1:6f};'.format(loss_item, loss_dic[loss_item].sum().data.item()) for loss_item in loss_dic])
@@ -293,6 +297,14 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
 
         with console.status("Training...", spinner="monkey") as status:
             for epoch in range(1, args.total_epochs + 1 - current_epoch):
+                # step the lambda...
+                for i, lambda_pose_step in enumerate(args.lambda_pose_steps):
+                    if lambda_pose_step <= epoch + current_epoch:
+                        args.lambda_pose = args.lambda_pose_list[i + 1]
+                for i, lambda_j2d_gt_step in enumerate(args.lambda_j2d_gt_steps):
+                    if lambda_j2d_gt_step <= epoch + current_epoch:
+                        args.lambda_j2d_gt = args.lambda_j2d_gt_list[i + 1]
+
                 status.update(status="Training...", spinner="monkey")
                 mode_train = True
                 requires = args.train_requires
@@ -313,13 +325,6 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                     save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=console)
                 scheduler.step()
 
-                # step the lambda...
-                for i, lambda_pose_step in enumerate(args.lambda_pose_steps):
-                    if lambda_pose_step == epoch + current_epoch:
-                        args.lambda_pose = args.lambda_pose_list[i + 1]
-                for i, lambda_j2d_gt_step in enumerate(args.lambda_j2d_gt_steps):
-                    if lambda_j2d_gt_step == epoch + current_epoch:
-                        args.lambda_j2d_gt = args.lambda_j2d_gt_list[i + 1]
     elif 'evaluation' in set_name:
         mode_train = False
         requires = args.test_requires
