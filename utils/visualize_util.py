@@ -120,7 +120,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
     plt.savefig(file_str,dpi=800)
 
     if writer is not None:
-        writer.add_figure(writer_tag, fig)
+        writer.add_figure(writer_tag, fig, epoch)
 
     plt.close()
     console.log(f"[u grey]save image at {file_str}[/u grey]")

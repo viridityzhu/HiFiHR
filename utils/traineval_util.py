@@ -435,15 +435,15 @@ def write_to_tb(mode_train, writer,loss_dic, epoch, lr=None, is_val=False):
         writer.add_scalar('Learning_rate', lr, epoch)
         for loss_key in loss_dic:
             if loss_dic[loss_key]>0:
-                writer.add_scalar('Train_'+loss_key, loss_dic[loss_key].cpu().detach().numpy(), epoch)
+                writer.add_scalar('Train_'+loss_key, loss_dic[loss_key].sum().cpu().detach().numpy(), epoch)
     elif is_val:
         for loss_key in loss_dic:
             if loss_dic[loss_key]>0:
-                writer.add_scalar('Val_'+loss_key, loss_dic[loss_key].cpu().detach().numpy(), epoch)
+                writer.add_scalar('Val_'+loss_key, loss_dic[loss_key].sum().cpu().detach().numpy(), epoch)
     else:
         for loss_key in loss_dic:
             if loss_dic[loss_key]>0:
-                writer.add_scalar('Test_'+loss_key, loss_dic[loss_key].cpu().detach().numpy(), epoch)
+                writer.add_scalar('Test_'+loss_key, loss_dic[loss_key].sum().cpu().detach().numpy(), epoch)
     return 0
 
 
