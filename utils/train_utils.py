@@ -3,7 +3,7 @@ import json
 import os
 import utils.visualize_util as visualize_util
 import time
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 from datetime import datetime
 import logging
 from rich import print
@@ -162,6 +162,7 @@ def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=Non
         torch.save(state, save_file)
         if save_file2 is not None:
             torch.save(state, save_file2)
+            console.log(f"[bold green]Also save model at {save_file2}")
             
     elif args.task == 'hm_train':
         state['rgb2hm'] = model.module.rgb2hm.state_dict()

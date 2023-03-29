@@ -85,6 +85,7 @@ class MyMANOLayer(torch.nn.Module):
         pose_weights = get_poseweights(poses, batch_size)#[b,135]   
         v_posed = v_shaped + torch.matmul(self.posedirs.repeat(batch_size,1,1,1),
                 (pose_weights.view(batch_size,1,(self.keypoints_num - 1)*9,1)).repeat(1,self.mesh_num,1,1)).squeeze(3)
+        # Final T pose with transformation done !
 
         # 3. regress joints from verts
         # rest verts -> joints

@@ -11,6 +11,8 @@ import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as torch_f
 
+from torch.utils.tensorboard import SummaryWriter
+
 from options import train_options
 from losses import loss_func_new
 from data.dataset import get_dataset
@@ -19,9 +21,11 @@ from utils.train_utils import *
 from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei
 from utils.fh_utils import AverageMeter,EvalUtil
+from utils.Freihand_GNN_mano.Freihand_trainer_mano_fullsup import dense_pose_Trainer
 
 
 console = Console()
+ytbHand_trainer = dense_pose_Trainer(None, None)
 def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, requires, args, writer=None):
     if mode_train:
         model.train()
@@ -48,8 +52,13 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'])
 
-        # Mano joints map to Frei joints
-        outputs['joints'] = Mano2Frei(outputs['joints'])
+        if args.hand_model == 'mano_new':
+            vertice_pred_list = outputs['verts']
+            outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list[-1]).permute(1,0,2)
+        else:
+
+            # Mano joints map to Frei joints
+            outputs['joints'] = Mano2Frei(outputs['joints'])
 
         # ** positions are relative to ~~wrist~~ middle root.
         ROOT = 9
@@ -72,12 +81,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # ===================================
         #      Compute and backward loss
         # ===================================
-        if dat_name == "RHD" and len(args.losses_rhd)>0:
-            loss_used = args.losses_rhd
-        elif dat_name == "FreiHand" and len(args.losses_frei)>0:
-            loss_used = args.losses_frei
-        else:
-            loss_used = args.losses
+        loss_used = args.losses
             
         # Compute loss function
         loss_dic = loss_func_new(examples, outputs, loss_used, dat_name, args)
@@ -376,7 +380,7 @@ if __name__ == '__main__':
         model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel, hand_model=args.hand_model, use_mean_shape=args.use_mean_shape, pretrain=args.pretrain)
     else:
         model = models.Model(args=args)
-    model = nn.DataParallel(model.cuda())
+    model.to(args.device)
     
     if 'training' in args.mode:
         if args.optimizer == "Adam":
@@ -386,6 +390,8 @@ if __name__ == '__main__':
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
     
     model, current_epoch, optimizer, scheduler = load_model(model, optimizer, scheduler, args)
+
+    model = nn.DataParallel(model.cuda())
 
 
     # Optionally freeze parts of the network

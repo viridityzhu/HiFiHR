@@ -10,12 +10,17 @@ import numpy as np
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
 from utils.my_mano import MyMANOLayer
+from utils.Freihand_GNN_mano.mano_network_PCA import YTBHand
 
 
 class Model(nn.Module):
     def __init__(self, ifRender, device, if_4c, hand_model, use_mean_shape, pretrain):
         super(Model, self).__init__()
+        if hand_model == 'mano_new':
+            self.ytbHand = YTBHand(None, None, use_pca=True, pca_comps=48)
+            return
 
+        self.ytbHand = None
         if pretrain == 'hr18sv2':
             self.features_dim = 1024 # for HRnet
         elif pretrain in ['res18', 'res50', 'res101']:
@@ -76,6 +81,14 @@ class Model(nn.Module):
 
 
     def forward(self, images, Ks=None, scale_gt=None):
+        if self.ytbHand is not None:
+            pred = self.ytbHand(images)
+            outputs = {
+                'pose_params': pred['theta'],
+                'shape_params': pred['beta'],
+                'verts': pred['mesh']
+                }
+            return outputs
         device = images.device
         # Use base_encoder to extract features
         # low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
