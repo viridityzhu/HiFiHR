@@ -101,7 +101,7 @@ def write_str(pstr,fpath):
 
 # this is the training files
 class dense_pose_Trainer(object):
-    def __init__(self, train_data_loader, test_data_loader,mano_dir = './utils/Freihand_GNNdemo/template',save_dir='./results'):
+    def __init__(self, train_data_loader, test_data_loader,mano_dir = 'utils/Freihand_GNN_mano/template',save_dir='./results'):
         self.train_loader = train_data_loader
         self.test_loader = test_data_loader
         mano_path = os.path.join(mano_dir,'MANO_RIGHT.pkl')

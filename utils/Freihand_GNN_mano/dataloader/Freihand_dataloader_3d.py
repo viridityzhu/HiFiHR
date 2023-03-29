@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from pycocotools.coco import COCO
+# from pycocotools.coco import COCO
 from torch.utils.data import Dataset
 import json
 import os

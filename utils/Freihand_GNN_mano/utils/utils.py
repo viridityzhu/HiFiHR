@@ -1,7 +1,7 @@
 import torch
 import os
 import numpy as np
-import openmesh as om
+# import openmesh as om
 
 
 def makedirs(folder):

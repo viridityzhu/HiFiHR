@@ -1,9 +1,9 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from torch_scatter import scatter_add
-from network.resnet import resnet18, resnet50
-from utils import utils, mesh_sampling 
+# from torch_scatter import scatter_add
+from utils.Freihand_GNN_mano.network.resnet import resnet18, resnet50
+from utils.Freihand_GNN_mano.utils import utils, mesh_sampling 
 import os.path as osp 
 import pickle
 # add some path into the system path 
@@ -163,7 +163,7 @@ class YTBHand(nn.Module):
         self.out_channels = [64,128,256,512]
         self.spiral_indices = spiral_indices
         self.up_transform = up_transform
-        self.num_vert = [u.size(0) for u in self.up_transform] + [self.up_transform[-1].size(1)]
+        # self.num_vert = [u.size(0) for u in self.up_transform] + [self.up_transform[-1].size(1)]
         self.uv_channel = 21
         self.use_mean_shape = use_mean_shape
 
