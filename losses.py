@@ -226,21 +226,26 @@ def loss_func(examples, outputs, loss_used, dat_name, args) -> dict:
 def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
     loss_dic = {}
     device = examples['imgs'].device
+
+    if args.base_loss_fn == 'L1':
+        base_loss_fn = nn.L1Loss()
+    elif args.base_loss_fn == 'L2':
+        base_loss_fn = torch_f.mse_loss
     
     # (used in full supervision) 2d joint loss: projected 2d joints -> gt 2d joints
     if 'joint_2d' in loss_used: 
         assert 'j2d_gt' in examples and ('j2d' in outputs), "Using joint_2d in losses, but j2d_gt or j2d are not provided."
-        joint_2d_loss = torch_f.mse_loss(examples['j2d_gt'], outputs['j2d'])
+        joint_2d_loss = base_loss_fn(examples['j2d_gt'], outputs['j2d'])
         joint_2d_loss = args.lambda_j2d_gt * joint_2d_loss
         loss_dic['joint_2d'] = joint_2d_loss
 
     # (used in full supervision) 3D joint loss & Bone scale loss: 3dj -> gt 3dj
     if 'joint_3d' in loss_used:
         assert 'joints' in outputs and 'joints' in examples, "Using open_2dj in losses, but joints or joints_gt are not provided."
-        joint_3d_loss = torch_f.mse_loss(outputs['joints'], examples['joints'])
+        joint_3d_loss = base_loss_fn(outputs['joints'], examples['joints'])
         joint_3d_loss = args.lambda_j3d * joint_3d_loss
         loss_dic["joint_3d"] = joint_3d_loss
-        joint_3d_loss_norm = torch_f.mse_loss((outputs['joints']-outputs['joints'][:,9].unsqueeze(1)),(examples['joints']-examples['joints'][:,9].unsqueeze(1)))
+        joint_3d_loss_norm = base_loss_fn((outputs['joints']-outputs['joints'][:,9].unsqueeze(1)),(examples['joints']-examples['joints'][:,9].unsqueeze(1)))
         joint_3d_loss_norm = args.lambda_j3d_norm * joint_3d_loss_norm
         loss_dic["joint_3d_norm"] = joint_3d_loss_norm
 
@@ -356,6 +361,7 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
     if 'mpose' in loss_used:
         assert 'pose_params' in outputs, "Using mpose as loss but pose_params not outputted."
         pose_loss = torch_f.mse_loss(outputs['pose_params'], torch.zeros_like(outputs['pose_params']).to(device))
+        # pose_loss = outputs['pose_params'].pow(2).sum(dim=-1).sqrt().mean()*10  
         pose_loss = args.lambda_pose * pose_loss
         loss_dic['mpose'] = pose_loss
     

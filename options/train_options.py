@@ -97,6 +97,7 @@ def get_parser():
     
     
 
+    parser.add_argument('--base_loss_fn', type=str, default='L2', help='L1 or L2')  
     parser.add_argument('--sigma_val', type=float, default=1e-6)#1e-4
     parser.add_argument('--lambda_laplacian', type=float, default=0.1)#5e-3
     parser.add_argument('--lambda_flatten', type=float, default=5e-4)
