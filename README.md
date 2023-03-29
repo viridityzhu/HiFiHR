@@ -10,6 +10,13 @@ S<sup>2</sup>HAND presents a self-supervised 3D hand reconstruction network that
 ### Environment (New)
 
 cuda11.7 python3.9 pytorch1.13.
+You may need to wake up your conda:
+```sh
+conda update -n base -c default conda
+conda config --append channels conda-forge
+conda update --all
+```
+
 ```sh
 conda env remove -n hand
 conda create -n hand python=3.9
@@ -20,7 +27,7 @@ conda install -c fvcore -c iopath -c conda-forge fvcore iopath
 # conda install pytorch3d -c pytorch3d
 pip install "git+https://github.com/facebookresearch/pytorch3d.git"
 
-conda install tqdm tensorboardX transforms3d scikit-image timm trimesh rtree opencv matplotlib
+conda install tqdm tensorboard transforms3d scikit-image timm trimesh rtree opencv matplotlib
 pip install chumpy
 ```
 
