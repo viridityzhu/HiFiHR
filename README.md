@@ -27,7 +27,7 @@ conda install -c fvcore -c iopath -c conda-forge fvcore iopath
 # conda install pytorch3d -c pytorch3d
 pip install "git+https://github.com/facebookresearch/pytorch3d.git"
 
-conda install tqdm tensorboard transforms3d scikit-image timm trimesh rtree opencv matplotlib
+conda install tqdm tensorboard transforms3d scikit-image timm trimesh rtree opencv matplotlib rich
 pip install chumpy
 ```
 
