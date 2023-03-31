@@ -111,7 +111,7 @@ def get_parser():
     parser.add_argument('--lambda_j2d_de', type=float, default=1e-4)#0.001
     parser.add_argument('--lambda_j3d', type=float, default=100)#100
     parser.add_argument('--lambda_j3d_norm', type=float, default=100)
-    parser.add_argument('--lambda_verts', type=float, default=100)
+    parser.add_argument('--lambda_vert_3d', type=float, default=100)
     parser.add_argument('--lambda_shape', type=float, default=1e-2)#0.001
     # parser.add_argument('--lambda_pose', type=float, default=1e-1)#0.001
     parser.add_argument('--lambda_pose_list', type=list, default=[0.00001])#0.001
