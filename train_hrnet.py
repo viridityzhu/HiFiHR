@@ -165,6 +165,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
                 dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
         else: # for evaluation
+            # ================================
+            #          Evaluation
+            # ================================
             pred_out_path = os.path.join(args.pred_output,'test',str(epoch))
             if epoch%args.save_interval==0 and epoch>0:
                 os.makedirs(pred_out_path, exist_ok=True)
@@ -172,7 +175,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
                 # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
-                # TODO add the eval function from ytbhand
+                # ---- evaluation: MPJPE after alignment --------
                 # load eval annotations
                 gt_path = '/storage_fast/jyzhu/HandRecon/freihand'
                 xyz_list, verts_list = json_load(os.path.join(gt_path, 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'evaluation_verts.json'))
@@ -193,6 +196,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.5f} cm")
                 test_log[epoch] = pose_3d_loss.item()
                 console.log(f'[bold green]Best results: {min(test_log.values()):.6f} epoch {min(test_log.values(), key=test_log.get):d}\n')
+                if writer is not None:
+                    with torch.no_grad():
+                        writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)
 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
