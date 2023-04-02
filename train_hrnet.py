@@ -26,6 +26,9 @@ from utils.Freihand_GNN_mano.Freihand_trainer_mano_fullsup import dense_pose_Tra
 
 console = Console()
 ytbHand_trainer = dense_pose_Trainer(None, None)
+test_log = {}
+
+
 def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, requires, args, writer=None):
     if mode_train:
         model.train()
@@ -60,7 +63,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             # Mano joints map to Frei joints
             outputs['joints'] = Mano2Frei(outputs['joints'])
 
-        # ** positions are relative to ~~wrist~~ middle root.
+        # ** positions are relative to middle root.
         ROOT = 9
         ROOT_NIMBLE = 11
         root_xyz = examples['joints'][:, ROOT, :].unsqueeze(1)
@@ -170,6 +173,27 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
                 # TODO add the eval function from ytbhand
+                # load eval annotations
+                gt_path = '/storage_fast/jyzhu/HandRecon/freihand'
+                xyz_list, verts_list = json_load(os.path.join(gt_path, 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'evaluation_verts.json'))
+                pose_align_all = []
+                pose_3d = np.array(xyz_pred_list)
+                pose_3d_gt = np.array(xyz_list)
+
+                for idx in range(pose_3d.shape[0]):
+                    #align prediction
+                    pose_pred_aligned=align_w_scale(pose_3d_gt[idx], pose_3d[idx])
+                    pose_align_all.append(pose_pred_aligned)
+                pose_align_all = torch.from_numpy(np.array(pose_align_all)).cuda()
+                pose_3d_gt = torch.from_numpy(pose_3d_gt).cuda()
+
+                pose_3d_loss = torch.linalg.norm((pose_align_all - pose_3d_gt), ord=2,dim=-1)
+                pose_3d_loss = (np.concatenate(pose_3d_loss.detach().cpu().numpy(),axis=0)).mean()
+
+                console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.5f} cm")
+                test_log[epoch] = pose_3d_loss.item()
+                console.log(f'[bold green]Best results: {min(test_log.values()):.6f} epoch {min(test_log.values(), key=test_log.get):d}\n')
+
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
 

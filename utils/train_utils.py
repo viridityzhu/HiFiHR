@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import json
 import os
@@ -7,6 +8,7 @@ import time
 from datetime import datetime
 import logging
 from rich import print
+from scipy.linalg import orthogonal_procrustes
 
 
 def load_model(model,optimizer,scheduler, args):
@@ -223,7 +225,41 @@ def dump(pred_out_path, xyz_pred_list, verts_pred_list):
             ], fo)
     print('[grey]Dumped %d joints and %d verts predictions to %s[/grey]' % (len(xyz_pred_list), len(verts_pred_list), pred_out_path))
 
+""" General util functions. """
+def _assert_exist(p):
+    msg = 'File does not exists: %s' % p
+    assert os.path.exists(p), msg
 
+def json_load(p):
+    _assert_exist(p)
+    with open(p, 'r') as fi:
+        d = json.load(fi)
+    return d
+
+def align_w_scale(mtx1, mtx2, return_trafo=False):
+    """ Align the predicted entity in some optimality sense with the ground truth. """
+    # center
+    t1 = mtx1.mean(0)
+    t2 = mtx2.mean(0)
+    mtx1_t = mtx1 - t1
+    mtx2_t = mtx2 - t2
+
+    # scale
+    s1 = np.linalg.norm(mtx1_t) + 1e-8
+    mtx1_t /= s1
+    s2 = np.linalg.norm(mtx2_t) + 1e-8
+    mtx2_t /= s2
+
+    # orth alignment
+    R, s = orthogonal_procrustes(mtx1_t, mtx2_t)
+
+    # apply trafos to the second matrix
+    mtx2_t = np.dot(mtx2_t, R.T) * s
+    mtx2_t = mtx2_t * s1 + t1
+    if return_trafo:
+        return R, s, s1, t1 - t2
+    else:
+        return mtx2_t
 
 
 
