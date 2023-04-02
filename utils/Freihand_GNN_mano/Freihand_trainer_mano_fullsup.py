@@ -284,10 +284,10 @@ class dense_pose_Trainer(object):
                 vertice_pred_list = prediction['mesh']
                 #normalized pred
                 vertice_pred = vertice_pred_list[-1]
-                joints_pred = self.xyz_from_vertice(vertice_pred).permute(1,0,2)
+                joints_pred = self.xyz_from_vertice(vertice_pred).permute(1,0,2) # b, 21, 3 -> 21, b, 3
 
                 vert_3d_all.append(vertice_pred.detach().cpu().numpy())
-                pose_3d_all.append(joints_pred.detach().cpu().numpy())
+                pose_3d_all.append(joints_pred.detach().cpu().numpy()) # [tensor(21,b,3), tensor, ...]
                 vert_3d_all_gt.append(batch_vertice.detach().cpu().numpy())
                 pose_3d_all_gt.append(batch_pose3d.detach().cpu().numpy())
             vert_3d = (np.concatenate(vert_3d_all, axis=0))
@@ -295,7 +295,7 @@ class dense_pose_Trainer(object):
             vert_3d_gt = (np.concatenate(vert_3d_all_gt, axis=0))
             pose_3d_gt = (np.concatenate(pose_3d_all_gt, axis=0))
 
-            for idx in range(vert_3d.shape[0]):
+            for idx in range(vert_3d.shape[0]): # 0 - 3000+
                 #align prediction
                 pose_pred_aligned=align_w_scale(pose_3d_gt[idx], pose_3d[idx])
                 vert_pred_aligned=align_w_scale(vert_3d_gt[idx], vert_3d[idx])

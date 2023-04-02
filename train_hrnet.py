@@ -110,9 +110,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
             for i in xyz_preds:
                 xyz_pred_list.append(i.squeeze())
-            j3d_ED_list, j2d_ED_list = save_3d(examples, outputs) # Euclidean distances between each joint-pair
-            log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging)
-            del j3d_ED_list, j2d_ED_list 
+            # j3d_ED_list, j2d_ED_list = save_3d(examples, outputs) # Euclidean distances between each joint-pair
+            # log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging)
+            # del j3d_ED_list, j2d_ED_list 
         # save 2D results
         if args.save_2d:
             # square errors?
@@ -120,6 +120,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             j2d_pred_ED_list.append(j2d_pred_ED)
             j2d_proj_ED_list.append(j2d_proj_ED)
             j2d_detect_ED_list.append(j2d_detect_ED)
+
 
         # Save visualization and print information
         batch_time.update(time.time() - end)
@@ -168,6 +169,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
                 # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
+                # TODO add the eval function from ytbhand
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
 
