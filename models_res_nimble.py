@@ -8,6 +8,7 @@ import time
 
 import numpy as np
 import pytorch3d
+from pytorch3d.renderer import RasterizationSettings, MeshRenderer, MeshRasterizer, SoftPhongShader
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
 from utils.my_mano import MyMANOLayer
@@ -32,7 +33,7 @@ class Model(nn.Module):
             self.ncomps = [20, 30, 10] # shape, pose, tex respectively.
             self.hand_layer = MyNIMBLELayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
         elif hand_model == 'mano':
-            self.ncomps = [10, 30, None] # shape, pose, no texture.
+            self.ncomps = [10, 48, None] # shape, pose, no texture.
             self.hand_layer = MyMANOLayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
             
         self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender, use_mean_shape=use_mean_shape)
@@ -42,10 +43,10 @@ class Model(nn.Module):
 
         # Renderer
         if self.ifRender:
+            pass
             # Define a renderer in pytorch3d
             # Rasterization settings for differentiable rendering, where the blur_radius
-            # initialization is based on Liu et al, 'Soft Rasterizer: A Differentiable 
-            # Renderer for Image-based 3D Reasoning', ICCV 2019
+            # initialization is based on Liu et al, 'Soft Rasterizer: A Differentiable Renderer for Image-based 3D Reasoning', ICCV 2019
             # sigma = 1e-4
             # raster_settings_soft = RasterizationSettings(
             #     image_size=224, 
@@ -63,8 +64,6 @@ class Model(nn.Module):
             #     shader=SoftPhongShader(device=device, 
             #         cameras=camera,
             #         lights=lights)
-            pass
-
 
 
 

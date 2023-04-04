@@ -1,8 +1,8 @@
 {
     "train_datasets":["FreiHand"],
     "val_datasets":["FreiHand"],
-    "freihand_base_path": "/storage_fast/jyzhu/HandRecon/freihand",
-    "base_out_path": "/storage_fast/jyzhu/HandRecon/outputs/freihand/mano",
+    "freihand_base_path": "../freihand",
+    "base_out_path": "outputs/freihand/mano",
     "is_write_tb": true,
     "writer_topic": "runs/freihand/mano/", 
     "total_epochs": 120,
@@ -31,7 +31,6 @@
     "lambda_pose": 0.00001,
 
     "pretrain": "res101",
-    "pretrain_model": "/storage_fast/jyzhu/HandRecon/outputs/freihand/mano/model/texturehand_latest.t7",
 
 
 
