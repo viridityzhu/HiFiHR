@@ -7,6 +7,7 @@ import math
 import time
 
 import numpy as np
+import pytorch3d
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
 from utils.my_mano import MyMANOLayer
@@ -39,43 +40,30 @@ class Model(nn.Module):
 
         self.ifRender = ifRender
 
-        # Renderer & Texture Estimation & Light Estimation
+        # Renderer
         if self.ifRender:
-            pass # TODO: define the renderer
-            # Define a neural renderer
-            # import neural_renderer as nr
-            # if 'lights' in args.train_requires or 'lights' in args.test_requires:
-            #     renderer_NR = nr.Renderer(image_size=args.image_size,background_color=[1,1,1],camera_mode='projection',orig_size=224,light_intensity_ambient=None, light_intensity_directional=None,light_color_ambient=None, light_color_directional=None,light_direction=None)#light_intensity_ambient=0.9
-            # else:
-            #     renderer_NR = nr.Renderer(image_size=args.image_size,camera_mode='projection',orig_size=224)
-            # self.renderer_NR = renderer_NR
+            # Define a renderer in pytorch3d
+            # Rasterization settings for differentiable rendering, where the blur_radius
+            # initialization is based on Liu et al, 'Soft Rasterizer: A Differentiable 
+            # Renderer for Image-based 3D Reasoning', ICCV 2019
+            # sigma = 1e-4
+            # raster_settings_soft = RasterizationSettings(
+            #     image_size=224, 
+            #     blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
+            #     faces_per_pixel=100, 
+            #     # perspective_correct=False, 
+            # )
 
-            '''
-            if self.texture_choice == 'surf':
-                self.texture_estimator = TextureEstimator(dim_in=self.dim_in,mode='surfaces')
-            elif self.texture_choice == 'nn_same':
-                self.color_estimator = ColorEstimator(dim_in=self.dim_in)
-            self.light_estimator = light_estimator(dim_in=self.dim_in)
-            '''
-            # self.light_estimator = LightEstimator(mode='surf')
-
-        # Pose adapter
-        # if (args.train_datasets)[0] == 'FreiHand':
-        #     self.get_gt_depth = True
-        #     self.dataset = 'FreiHand'
-        # # elif (args.train_datasets)[0] == 'RHD':
-        # #     self.get_gt_depth = False
-        # #     self.dataset = 'RHD'
-        # #     if self.use_pose_regressor: # by default false
-        # #         self.mesh2pose = mesh2poseNet()
-        # # elif (args.train_datasets)[0] == 'Obman':
-        # #     self.get_gt_depth = False
-        # #     self.dataset = 'Obman'
-        # elif (args.train_datasets)[0] == 'HO3D':
-        #     self.get_gt_depth = True
-        #     self.dataset = 'HO3D'
-        # else:
-        #     self.get_gt_depth = False
+            # # Differentiable soft renderer using per vertex RGB colors for texture
+            # renderer_textured = MeshRenderer(
+            #     rasterizer=MeshRasterizer(
+            #         cameras=camera, 
+            #         raster_settings=raster_settings_soft
+            #     ),
+            #     shader=SoftPhongShader(device=device, 
+            #         cameras=camera,
+            #         lights=lights)
+            pass
 
 
 
@@ -122,19 +110,7 @@ class Model(nn.Module):
         if self.ifRender:
             pass
             # TODO: implement rendering using tex_img
-            # lights = self.light_estimator(low_features)
-            # self.renderer_NR.light_intensity_ambient = lights[:,0].to(device)
-            # self.renderer_NR.light_intensity_directional = lights[:,1].to(device)
-            # self.renderer_NR.light_color_ambient = lights[:,2:5].to(device)
-            # self.renderer_NR.light_color_directional = lights[:,5:8].to(device)
-            # self.renderer_NR.light_direction = lights[:,8:].to(device)
-            # outputs['lights'] = lights
 
-            # faces = outputs['faces'].type(torch.int32)
-            # # use neural renderer
-            # #I = torch.tensor([[1,0,0,0],[0,1,0,0],[0,0,1,0]]).float()
-            # #Is = torch.unsqueeze(I,0).repeat(Ks.shape[0],1,1).to(Ks.device)
-            
             # self.renderer_NR.R = torch.unsqueeze(torch.tensor([[1,0,0],[0,1,0],[0,0,1]]).float(),0).repeat(Ks.shape[0],1,1).to(device)
             # self.renderer_NR.t = torch.unsqueeze(torch.tensor([[0,0,0]]).float(),0).repeat(Ks.shape[0],1,1).to(device)
             # self.renderer_NR.K = Ks[:,:,:3].to(device)
@@ -149,6 +125,12 @@ class Model(nn.Module):
             # if self.get_gt_depth and gt_verts is not None:
             #     gt_depth = self.renderer_NR(gt_verts, faces, mode='depth')
             #     gt_depth = gt_depth * (gt_depth < 1).float()#set 100 into 0
+            pass
+            # re_img = self.renderer(outputs['skin_meshes'], cameras=cameras, lights=lights)
         outputs.update(hand_params)           
 
         return outputs
+    
+    def render(self, meshes, faces, textures):
+        # Given mesh, face and texture, render the image using PyTorch3D
+        pass
