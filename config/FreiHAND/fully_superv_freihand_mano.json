@@ -25,10 +25,12 @@
     "render": false,
     "four_channel": false,
     "hand_model": "mano",
+    "base_loss_fn": "L1",
     "use_mean_shape": true,
 
     "lambda_j3d": 10,
-    "lambda_pose": 0.00001,
+    "lambda_pose_steps": [10, 20],
+    "lambda_pose_list": [0.01, 0.001, 0.00001],
 
     "pretrain": "res101",
 
