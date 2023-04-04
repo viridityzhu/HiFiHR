@@ -38,12 +38,13 @@ class MyMANOLayer(torch.nn.Module):
 
     def forward(self, hand_params, handle_collision=True):
         batch_size = hand_params['pose_params'].shape[0]
-        verts, joints = self.mano_layer(hand_params['pose_params'], hand_params['shape_params']) # bs*778*3
+        verts, _ = self.mano_layer(hand_params['pose_params'], hand_params['shape_params']) # bs*778*3
+        #* not use this joints, but regress it later. Idk why.
         mesh_face = self.mesh_face.repeat(batch_size, 1, 1)
         skin_p3dmesh = Meshes(verts, mesh_face)
         return {
             # 'nimble_joints': bone_joints, # 25 joints
-            'joints': joints, # mano joints, 21
+            # 'joints': joints, # mano joints, 21
             # 'verts': verts, # 5990 verts
             # 'faces': None, # faces, # very big number
             # 'rot': rot, # b, 3
@@ -279,18 +280,11 @@ class ManoLayer(Module):
 
         self.smpl_data = smpl_data
 
-        self.register_buffer('th_betas',
-                             torch.Tensor(smpl_data['betas'].r).unsqueeze(0))
-        self.register_buffer('th_shapedirs',
-                             torch.Tensor(smpl_data['shapedirs'].r))
-        self.register_buffer('th_posedirs',
-                             torch.Tensor(smpl_data['posedirs'].r))
-        self.register_buffer(
-            'th_v_template',
-            torch.Tensor(smpl_data['v_template'].r).unsqueeze(0))
-        self.register_buffer(
-            'th_J_regressor',
-            torch.Tensor(np.array(smpl_data['J_regressor'].toarray())))
+        self.register_buffer('th_betas', torch.Tensor(smpl_data['betas'].r).unsqueeze(0))
+        self.register_buffer('th_shapedirs', torch.Tensor(smpl_data['shapedirs'].r))
+        self.register_buffer('th_posedirs', torch.Tensor(smpl_data['posedirs'].r))
+        self.register_buffer( 'th_v_template', torch.Tensor(smpl_data['v_template'].r).unsqueeze(0))
+        self.register_buffer( 'th_J_regressor', torch.Tensor(np.array(smpl_data['J_regressor'].toarray())))
         self.register_buffer('th_weights',
                              torch.Tensor(smpl_data['weights'].r))
         self.register_buffer('th_faces',

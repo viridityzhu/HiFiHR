@@ -58,8 +58,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         if args.hand_model == 'mano_new':
             vertice_pred_list = outputs['verts']
             outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list[-1]).permute(1,0,2)
+        elif args.hand_model == 'mano':
+            vertice_pred_list = outputs['mano_verts']
+            outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list).permute(1,0,2)
         else:
-
             # Mano joints map to Frei joints
             outputs['joints'] = Mano2Frei(outputs['joints'])
 
