@@ -193,9 +193,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 pose_3d_loss = torch.linalg.norm((pose_align_all - pose_3d_gt), ord=2,dim=-1)
                 pose_3d_loss = (np.concatenate(pose_3d_loss.detach().cpu().numpy(),axis=0)).mean()
 
-                console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.5f} cm")
+                console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.6f} cm")
                 test_log[epoch] = pose_3d_loss.item()
-                console.log(f'[bold green]Best results: {min(test_log.values()):.6f} epoch {min(test_log, key=test_log.get):d}\n')
+                console.log(f'[bold green]Best results: {min(test_log.values()) * 100.0:.6f} cm, epoch {min(test_log, key=test_log.get):d}\n')
                 if writer is not None:
                     with torch.no_grad():
                         writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)

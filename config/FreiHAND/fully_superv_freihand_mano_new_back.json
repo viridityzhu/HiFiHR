@@ -2,7 +2,7 @@
     "train_datasets":["FreiHand"],
     "val_datasets":["FreiHand"],
     "freihand_base_path": "../freihand",
-    "base_out_path": "outputs/freihand/mano_new",
+    "base_out_path": "outputs/freihand/mano_new_back",
     "is_write_tb": true,
     "writer_topic": "runs/freihand/mano_new/", 
     "total_epochs": 200,
