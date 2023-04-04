@@ -177,7 +177,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
                 # ---- evaluation: MPJPE after alignment --------
                 # load eval annotations
-                gt_path = '/storage_fast/jyzhu/HandRecon/freihand'
+                gt_path = args.freihand_base_path
                 xyz_list, verts_list = json_load(os.path.join(gt_path, 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'evaluation_verts.json'))
                 pose_align_all = []
                 pose_3d = np.array(xyz_pred_list)
@@ -195,7 +195,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
                 console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.5f} cm")
                 test_log[epoch] = pose_3d_loss.item()
-                console.log(f'[bold green]Best results: {min(test_log.values()):.6f} epoch {min(test_log.values(), key=test_log.get):d}\n')
+                console.log(f'[bold green]Best results: {min(test_log.values()):.6f} epoch {min(test_log, key=test_log.get):d}\n')
                 if writer is not None:
                     with torch.no_grad():
                         writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)
