@@ -342,6 +342,9 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                 for i, lambda_j2d_gt_step in enumerate(args.lambda_j2d_gt_steps):
                     if lambda_j2d_gt_step <= epoch + current_epoch:
                         args.lambda_j2d_gt = args.lambda_j2d_gt_list[i + 1]
+                for i, lambda_shape_step in enumerate(args.lambda_shape_steps):
+                    if lambda_shape_step <= epoch + current_epoch:
+                        args.lambda_shape = args.lambda_shape_list[i + 1]
 
                 status.update(status="Training...", spinner="monkey")
                 mode_train = True

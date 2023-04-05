@@ -7,7 +7,7 @@
     "writer_topic": "runs/freihand/mano/", 
     "total_epochs": 250,
     "init_lr": 0.001,
-    "lr_steps": [50, 80, 120, 150, 200],
+    "lr_steps": [50, 80, 120, 200],
     "lr_gamma": 0.5,
     "save_interval": 3,
     "controlled_exp": false,
@@ -33,7 +33,7 @@
     "lambda_pose_list": [0.01, 0.001, 0.00001],
 
     "pretrain": "res101",
-    "pretrain_model": "outputs/freihand/mano/model/texturehand_latest.t7",
+    "pretrain_model": "outputs/freihand/mano/model/texturehand_120.t7",
 
 
 
