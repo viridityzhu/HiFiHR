@@ -1715,10 +1715,9 @@ class FreiHand:
         self.scale_list = json_load(os.path.join(self.base_path, '%s_scale.json' % dataset_name))
         self.mano_list = json_load(os.path.join(self.base_path, '%s_mano.json' % dataset_name))
         self.joint_list = json_load(os.path.join(self.base_path, '%s_xyz.json' % dataset_name))
+        self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % self.set_name))
         
         if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':# only 32560
-            self.verts_list = []
-            #self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % self.set_name))
             #self.open_2dj_lists = json_load('/data/FreiHand_save/debug/detect_all.json')
             # self.open_2dj_lists = json_load(os.path.join(self.base_path, 'openpose_v2/training', 'detect_all.json'))
             self.open_2dj_lists = json_load(os.path.join(self.base_path, 'outputs', 'freihand-train_openpose_keypoints.json'))
@@ -1727,8 +1726,6 @@ class FreiHand:
             #self.CRFmask_dir = '/data/FreiHand_save/CRFmask/training'
             self.CRFmask_dir = os.path.join(self.base_path, 'CRFmask/training')
             
-            
-
             if self.set_name == 'trainval_train':
                 self.K_list = self.K_list[:30000]
                 self.scale_list = self.scale_list[:30000]
@@ -1799,7 +1796,6 @@ class FreiHand:
             #mask_names.append(mask_path)
         self.image_names = image_names
         #self.mask_names = mask_names
-        #import pdb; pdb.set_trace()
         del image_names
         #del mask_names
         del prefixes

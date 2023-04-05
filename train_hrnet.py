@@ -56,12 +56,14 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         outputs = model(examples['imgs'], Ks=examples['Ps'])
 
         if args.hand_model == 'mano_new':
+            # regress joints from verts
             vertice_pred_list = outputs['verts']
             outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list[-1]).permute(1,0,2)
         elif args.hand_model == 'mano':
+            # regress joints from verts
             vertice_pred_list = outputs['mano_verts']
             outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list).permute(1,0,2)
-        else:
+        else: # nimble
             # Mano joints map to Frei joints
             outputs['joints'] = Mano2Frei(outputs['joints'])
 
@@ -70,7 +72,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         ROOT_NIMBLE = 11
         root_xyz = examples['joints'][:, ROOT, :].unsqueeze(1)
         examples['joints'] = examples['joints'] - root_xyz
+        examples['verts'] = examples['verts'] - root_xyz
         outputs['joints'] = outputs['joints'] - outputs['joints'][:, ROOT, :].unsqueeze(1)
+        outputs['mano_verts'] = outputs['mano_verts'] - outputs['mano_verts'][:, ROOT, :].unsqueeze(1)
         if args.hand_model == 'nimble':
             outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, ROOT_NIMBLE, :].unsqueeze(1)
 

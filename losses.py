@@ -252,8 +252,8 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
 
     # (used in full supervision) 3D verts loss: 3dj -> gt 3dj
     if 'vert_3d' in loss_used:
-        assert 'verts' in outputs and 'verts' in examples, "Using vert_3d in losses, but verts or verts_gt are not provided."
-        vert_3d_loss = base_loss_fn(outputs['verts'], examples['verts'])
+        assert 'mano_verts' in outputs and 'verts' in examples, "Using vert_3d in losses, but verts or verts_gt are not provided."
+        vert_3d_loss = base_loss_fn(outputs['mano_verts'], examples['verts'])
         vert_3d_loss = args.lambda_vert_3d * vert_3d_loss
         loss_dic["vert_3d"] = vert_3d_loss
 
