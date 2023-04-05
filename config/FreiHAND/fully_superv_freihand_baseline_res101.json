@@ -7,7 +7,7 @@
     "writer_topic": "runs/freihand/baseline/", 
     "total_epochs": 250,
     "init_lr": 0.001,
-    "lr_steps": [50, 80, 120, 150, 200],
+    "lr_steps": [50, 80, 110, 160, 200],
     "lr_gamma": 0.5,
     "save_interval": 3,
     "controlled_exp": false,
