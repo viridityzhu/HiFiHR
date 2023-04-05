@@ -206,13 +206,11 @@ class dense_pose_Trainer(object):
     def xyz_from_vertice(self, vertice):
         self.Jreg = self.mano_data['J_regressor']
         np_J_regressor = torch.from_numpy(self.Jreg.toarray().T).float()
-        #print(vertice.shape, np_J_regressor.shape)
         joint_x = torch.matmul(vertice[:, :, 0], np_J_regressor.cuda())
         joint_y = torch.matmul(vertice[:, :, 1], np_J_regressor.cuda())
         joint_z = torch.matmul(vertice[:, :, 2], np_J_regressor.cuda())
         joints = torch.stack([joint_x, joint_y, joint_z], dim=2)
         coords_kp_xyz3 = self.get_keypoints_from_mesh_np(vertice, joints)
-        #print(joints.shape,coords_kp_xyz3.shape)
 
         return coords_kp_xyz3
 
