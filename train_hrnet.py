@@ -398,6 +398,7 @@ if __name__ == '__main__':
     args = train_options.make_output_dir(args)
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.lambda_pose = args.lambda_pose_list[0]
+    args.lambda_shape = args.lambda_shape_list[0]
     args.lambda_j2d_gt = args.lambda_j2d_gt_list[0]
 
     if args.is_write_tb:
