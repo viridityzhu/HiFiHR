@@ -31,15 +31,18 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}{}.png'.format(epoch, idx, evalName))
     fig = plt.figure()
-    ax1 = fig.add_subplot(241)
-    ax2 = fig.add_subplot(242, projection='3d')
-    ax3 = fig.add_subplot(243, projection='3d')
-    ax4 = fig.add_subplot(244)
+    ax1 = fig.add_subplot(331)
+    ax2 = fig.add_subplot(332, projection='3d')
+    ax3 = fig.add_subplot(333, projection='3d')
+    ax4 = fig.add_subplot(334)
 
-    ax5 = fig.add_subplot(245, projection='3d')
-    ax6 = fig.add_subplot(246, projection='3d')
-    ax7 = fig.add_subplot(247, projection='3d')
-    ax8 = fig.add_subplot(248)
+    ax5 = fig.add_subplot(335, projection='3d')
+    ax6 = fig.add_subplot(336, projection='3d')
+    ax7 = fig.add_subplot(337, projection='3d')
+    ax8 = fig.add_subplot(338)
+
+    ax9 = fig.add_subplot(339)
+    
     
     ax_font_size = 6
     # 11 Image + GT 2D keypints
@@ -118,6 +121,12 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
         plot_hand_3d(ax3, j3d_out, order='xyz', dataset_name='nimble')
     ax3.set_title("Pred 3D nimble joints (full size)", fontsize=ax_font_size)
     ax7.set_title("Pred 3D nimble joints", fontsize=ax_font_size)
+
+    # 51 Rendered RGB image
+    if re_img is not None:
+        ax9.imshow(re_img[0].cpu().detach().permute(1,2,0).numpy())
+        ax9.set_title("Rendered Img", fontsize=ax_font_size)
+    ax9.axis('off')
    
 
     

@@ -35,6 +35,9 @@ def load_model(model,optimizer,scheduler, args):
         if 'ytbHand' in state_dict.keys() and hasattr(model,'ytbHand'):
             model.ytbHand.load_state_dict(state_dict['ytbHand'])
             print('load ytbHand')
+        if 'renderer_p3d'in state_dict.keys() and hasattr(model,'renderer_p3d'):
+            model.renderer_p3d.load_state_dict(state_dict['renderer_p3d'])
+            print('load renderer_p3d')
         
         if 'decoder' in state_dict.keys() and hasattr(model,'hand_decoder'):
             model.hand_decoder.load_state_dict(state_dict['decoder'])
@@ -136,6 +139,9 @@ def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=Non
             state['nimble_layer'] = model.module.nimble_layer.state_dict()
         if hasattr(model.module,'ytbHand'):
             state['ytbHand'] = model.module.ytbHand.state_dict()
+        if hasattr(model.module,'renderer_p3d'):
+            state['renderer_p3d'] = model.module.renderer_p3d.state_dict()
+            
         
         if hasattr(model.module,'heatmap_attention'):
             state['heatmap_attention'] = model.module.heatmap_attention.state_dict()

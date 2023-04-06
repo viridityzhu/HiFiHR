@@ -9,16 +9,22 @@ import time
 import numpy as np
 import pytorch3d
 from pytorch3d.renderer import RasterizationSettings, MeshRenderer, MeshRasterizer, SoftPhongShader
+import pytorch3d.renderer as p3d_renderer
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
+from utils.traineval_util import Mano2Frei, trans_proj_j2d
 from utils.my_mano import MyMANOLayer
 from utils.Freihand_GNN_mano.mano_network_PCA import YTBHand
+from utils.Freihand_GNN_mano.Freihand_trainer_mano_fullsup import dense_pose_Trainer
+ytbHand_trainer = dense_pose_Trainer(None, None)
 
 
 class Model(nn.Module):
-    def __init__(self, ifRender, device, if_4c, hand_model, use_mean_shape, pretrain):
+    def __init__(self, ifRender, device, if_4c, hand_model, use_mean_shape, pretrain, root_id=9, root_id_nimble=11):
         super(Model, self).__init__()
         self.hand_model = hand_model
+        self.root_id = root_id
+        self.root_id_nimble = root_id_nimble
         if hand_model == 'mano_new':
             self.ytbHand = YTBHand(None, None, use_pca=True, pca_comps=48)
             return
@@ -43,17 +49,16 @@ class Model(nn.Module):
 
         # Renderer
         if self.ifRender:
-            pass
             # Define a renderer in pytorch3d
             # Rasterization settings for differentiable rendering, where the blur_radius
             # initialization is based on Liu et al, 'Soft Rasterizer: A Differentiable Renderer for Image-based 3D Reasoning', ICCV 2019
-            # sigma = 1e-4
-            # raster_settings_soft = RasterizationSettings(
-            #     image_size=224, 
-            #     blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
-            #     faces_per_pixel=100, 
-            #     # perspective_correct=False, 
-            # )
+            sigma = 1e-4
+            raster_settings_soft = RasterizationSettings(
+                image_size=224, 
+                blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
+                faces_per_pixel=100, 
+                # perspective_correct=False, 
+            )
 
             # # Differentiable soft renderer using per vertex RGB colors for texture
             # renderer_textured = MeshRenderer(
@@ -64,10 +69,16 @@ class Model(nn.Module):
             #     shader=SoftPhongShader(device=device, 
             #         cameras=camera,
             #         lights=lights)
+            # create a renderer object
+            self.renderer_p3d = MeshRenderer(
+                rasterizer=MeshRasterizer(raster_settings=raster_settings_soft),
+                shader=SoftPhongShader(device=device),
+            )
 
 
 
-    def forward(self, images, Ks=None, scale_gt=None):
+
+    def forward(self, images, Ks=None, scale_gt=None, root_xyz=None):
         if self.hand_model == 'mano_new':
             pred = self.ytbHand(images)
             outputs = {
@@ -103,33 +114,54 @@ class Model(nn.Module):
         #     'textures': tex_img,
         #     'rot':rot
         # }
+        outputs.update(hand_params)           
 
         # map nimble 25 joints to freihand 21 joints
+        if self.hand_model == 'mano_new':
+            # regress joints from verts
+            vertice_pred_list = outputs['verts']
+            outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list[-1]).permute(1,0,2)
+        elif self.hand_model == 'mano':
+            # regress joints from verts
+            vertice_pred_list = outputs['mano_verts']
+            outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list).permute(1,0,2)
+        else: # nimble
+            # Mano joints map to Frei joints
+            outputs['joints'] = Mano2Frei(outputs['joints'])
 
+        # ** offset positions relative to root.
+        pred_root_xyz = outputs['joints'][:, self.root_id, :].unsqueeze(1)
+        outputs['joints'] = outputs['joints'] - pred_root_xyz
+        outputs['mano_verts'] = outputs['mano_verts'] - pred_root_xyz
+        if self.hand_model == 'nimble':
+            outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, self.root_id_nimble, :].unsqueeze(1)
+
+        
+        # Projection transformation, project joints to 2D
+        if 'joints' in outputs:
+            j2d = trans_proj_j2d(outputs, Ks, scale_gt, root_xyz=root_xyz)
+            outputs.update({'j2d': j2d})
+            if self.hand_model == 'nimble':
+                nimble_j2d = trans_proj_j2d(outputs, Ks, scale_gt, root_xyz=root_xyz, which_joints='nimble_joints')
+                outputs.update({'nimble_j2d': nimble_j2d})
+
+        # Render image
         if self.ifRender:
-            pass
-            # TODO: implement rendering using tex_img
+            # set up renderer parameters
+            self.renderer_p3d.cameras = p3d_renderer.cameras.PerspectiveCameras(K=Ks)
+            self.renderer_p3d.lighting = p3d_renderer.lighting.PointLights(
+                ambient_color=((1.0, 1.0, 1.0),),
+                diffuse_color=((0.0, 0.0, 0.0),),
+                specular_color=((0.0, 0.0, 0.0),),
+                location=((0.0, 0.0, 0.0),),
+            )
 
-            # self.renderer_NR.R = torch.unsqueeze(torch.tensor([[1,0,0],[0,1,0],[0,0,1]]).float(),0).repeat(Ks.shape[0],1,1).to(device)
-            # self.renderer_NR.t = torch.unsqueeze(torch.tensor([[0,0,0]]).float(),0).repeat(Ks.shape[0],1,1).to(device)
-            # self.renderer_NR.K = Ks[:,:,:3].to(device)
-            # self.renderer_NR.dist_coeffs = self.renderer_NR.dist_coeffs.to(device)
-            
-            # face_textures = textures.view(textures.shape[0],textures.shape[1],1,1,1,3)
-            
-            # re_img,re_depth,re_sil = self.renderer_NR(vertices, faces, torch.tanh(face_textures), mode=None)
+            # render the image
+            # move to the root relative coord. verts = verts - pred_root_xyz + root_xyz
+            outputs['skin_meshes'].offset_verts_(-pred_root_xyz).offset_verts_(root_xyz)
+            rendered_images = self.renderer_p3d(outputs['skin_meshes'])
 
-            # re_depth = re_depth * (re_depth < 1).float()#set 100 into 0
-
-            # if self.get_gt_depth and gt_verts is not None:
-            #     gt_depth = self.renderer_NR(gt_verts, faces, mode='depth')
-            #     gt_depth = gt_depth * (gt_depth < 1).float()#set 100 into 0
-            pass
-            # re_img = self.renderer(outputs['skin_meshes'], cameras=cameras, lights=lights)
-        outputs.update(hand_params)           
+        outputs['re_img'] = rendered_images[..., :3]
 
         return outputs
     
-    def render(self, meshes, faces, textures):
-        # Given mesh, face and texture, render the image using PyTorch3D
-        pass

@@ -21,11 +21,9 @@ from utils.train_utils import *
 from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei
 from utils.fh_utils import AverageMeter,EvalUtil
-from utils.Freihand_GNN_mano.Freihand_trainer_mano_fullsup import dense_pose_Trainer
 
 
 console = Console()
-ytbHand_trainer = dense_pose_Trainer(None, None)
 test_log = {}
 
 
@@ -52,40 +50,14 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         examples = data_dic(sample, dat_name, set_name, args)
         del sample
         
+        root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
-        outputs = model(examples['imgs'], Ks=examples['Ps'])
+        outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scales'], root_xyz=root_xyz)
 
-        if args.hand_model == 'mano_new':
-            # regress joints from verts
-            vertice_pred_list = outputs['verts']
-            outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list[-1]).permute(1,0,2)
-        elif args.hand_model == 'mano':
-            # regress joints from verts
-            vertice_pred_list = outputs['mano_verts']
-            outputs['joints'] = ytbHand_trainer.xyz_from_vertice(vertice_pred_list).permute(1,0,2)
-        else: # nimble
-            # Mano joints map to Frei joints
-            outputs['joints'] = Mano2Frei(outputs['joints'])
 
         # ** positions are relative to middle root.
-        ROOT = 9
-        ROOT_NIMBLE = 11
-        root_xyz = examples['joints'][:, ROOT, :].unsqueeze(1)
         examples['joints'] = examples['joints'] - root_xyz
         examples['verts'] = examples['verts'] - root_xyz
-        outputs['joints'] = outputs['joints'] - outputs['joints'][:, ROOT, :].unsqueeze(1)
-        outputs['mano_verts'] = outputs['mano_verts'] - outputs['mano_verts'][:, ROOT, :].unsqueeze(1)
-        if args.hand_model == 'nimble':
-            outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, ROOT_NIMBLE, :].unsqueeze(1)
-
-        
-        # Projection transformation, project joints to 2D
-        if 'joints' in outputs:
-            j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz)
-            outputs.update({'j2d': j2d})
-            if args.hand_model == 'nimble':
-                nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
-                outputs.update({'nimble_j2d': nimble_j2d})
         
         # ===================================
         #      Compute and backward loss
@@ -397,6 +369,8 @@ if __name__ == '__main__':
     
     args = train_options.make_output_dir(args)
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    args.ROOT = 9
+    args.ROOT_NIMBLE = 11
     args.lambda_pose = args.lambda_pose_list[0]
     args.lambda_shape = args.lambda_shape_list[0]
     args.lambda_j2d_gt = args.lambda_j2d_gt_list[0]
@@ -419,7 +393,8 @@ if __name__ == '__main__':
 
     if args.new_model:
         print("Using new model... Equipping Resnet and NIMBLE!!")
-        model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel, hand_model=args.hand_model, use_mean_shape=args.use_mean_shape, pretrain=args.pretrain)
+        model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel, hand_model=args.hand_model, use_mean_shape=args.use_mean_shape, pretrain=args.pretrain,
+                                 root_id=args.ROOT, root_id_nimble=args.ROOT_NIMBLE)
     else:
         model = models.Model(args=args)
     model.to(args.device)
