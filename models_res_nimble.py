@@ -136,14 +136,6 @@ class Model(nn.Module):
         if self.hand_model == 'nimble':
             outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, self.root_id_nimble, :].unsqueeze(1)
 
-        
-        # Projection transformation, project joints to 2D
-        if 'joints' in outputs:
-            j2d = trans_proj_j2d(outputs, Ks, scale_gt, root_xyz=root_xyz)
-            outputs.update({'j2d': j2d})
-            if self.hand_model == 'nimble':
-                nimble_j2d = trans_proj_j2d(outputs, Ks, scale_gt, root_xyz=root_xyz, which_joints='nimble_joints')
-                outputs.update({'nimble_j2d': nimble_j2d})
 
         # Render image
         if self.ifRender:
@@ -158,7 +150,8 @@ class Model(nn.Module):
 
             # render the image
             # move to the root relative coord. verts = verts - pred_root_xyz + root_xyz
-            outputs['skin_meshes'].offset_verts_(-pred_root_xyz).offset_verts_(root_xyz)
+            verts_num = outputs['skin_meshes']._num_verts_per_mesh[0]
+            outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(-1, 3)).offset_verts_(root_xyz.repeat(1, verts_num, 1).view(-1, 3))
             rendered_images = self.renderer_p3d(outputs['skin_meshes'])
 
         outputs['re_img'] = rendered_images[..., :3]

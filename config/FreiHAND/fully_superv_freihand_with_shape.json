@@ -22,7 +22,7 @@
     "demo_freq": 200,
 
     "new_model": true,
-    "render": false,
+    "render": true,
     "four_channel": false,
     "hand_model": "nimble",
     "base_loss_fn": "L1",

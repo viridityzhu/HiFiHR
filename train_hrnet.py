@@ -58,6 +58,14 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # ** positions are relative to middle root.
         examples['joints'] = examples['joints'] - root_xyz
         examples['verts'] = examples['verts'] - root_xyz
+
+        # Projection transformation, project joints to 2D
+        if 'joints' in outputs:
+            j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz)
+            outputs.update({'j2d': j2d})
+            if args.hand_model == 'nimble':
+                nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
+                outputs.update({'nimble_j2d': nimble_j2d})
         
         # ===================================
         #      Compute and backward loss
