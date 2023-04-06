@@ -124,7 +124,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
 
     # 51 Rendered RGB image
     if re_img is not None:
-        ax9.imshow(re_img[0].cpu().detach().permute(1,2,0).numpy())
+        ax9.imshow(re_img[0].cpu().detach().numpy())
         ax9.set_title("Rendered Img", fontsize=ax_font_size)
     ax9.axis('off')
    

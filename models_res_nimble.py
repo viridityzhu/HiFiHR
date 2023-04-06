@@ -51,14 +51,14 @@ class Model(nn.Module):
         if self.ifRender:
             # Define a renderer in pytorch3d
             # Initialize a perspective camera.
-            cameras = p3d_renderer.cameras.PerspectiveCameras()
+            cameras = p3d_renderer.cameras.PerspectiveCameras(device=device)
             # Rasterization settings for differentiable rendering, where the blur_radius
             # initialization is based on Liu et al, 'Soft Rasterizer: A Differentiable Renderer for Image-based 3D Reasoning', ICCV 2019
             sigma = 1e-4
             raster_settings_soft = RasterizationSettings(
                 image_size=224, 
                 blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
-                faces_per_pixel=100, 
+                faces_per_pixel=10, 
                 # perspective_correct=False, 
             )
 
@@ -144,12 +144,13 @@ class Model(nn.Module):
         # Render image
         if self.ifRender:
             # set up renderer parameters
-            self.renderer_p3d.cameras = p3d_renderer.cameras.PerspectiveCameras(K=Ks)
+            self.renderer_p3d.cameras = p3d_renderer.cameras.PerspectiveCameras(K=Ks, device=device)
             self.renderer_p3d.lighting = p3d_renderer.lighting.PointLights(
                 ambient_color=((1.0, 1.0, 1.0),),
                 diffuse_color=((0.0, 0.0, 0.0),),
                 specular_color=((0.0, 0.0, 0.0),),
                 location=((0.0, 0.0, 0.0),),
+                device=device,
             )
 
             # render the image
@@ -158,7 +159,7 @@ class Model(nn.Module):
             outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(-1, 3)).offset_verts_(root_xyz.repeat(1, verts_num, 1).view(-1, 3))
             rendered_images = self.renderer_p3d(outputs['skin_meshes'])
 
-        outputs['re_img'] = rendered_images[..., :3]
+            outputs['re_img'] = rendered_images[..., :3]
 
         return outputs
     
