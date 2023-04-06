@@ -26,7 +26,7 @@
     "four_channel": false,
     "hand_model": "nimble",
     "base_loss_fn": "L1",
-    "use_mean_shape": true,
+    "use_mean_shape": false,
 
     "lambda_j3d": 10,
     "lambda_vert_3d": 10,

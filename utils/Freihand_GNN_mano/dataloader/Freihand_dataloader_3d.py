@@ -154,6 +154,13 @@ def processing_augmentation(image,pose3d,verts):  #scale, transiltion， uv argu
     return image, pose3d,verts
 
 def cut_img(img_list, label2d_list, camera=None, radio=0.7, img_size=256):
+    '''
+        calculates a bounding box that contains all the 2D points in label2d_list,
+        and then crops and resizes the input images and corresponding 2D points 
+        to fit within this bounding box.
+        If camera is provided, the function also updates the camera intrinsic 
+        matrix camera to reflect the new image dimensions.
+    '''
     Min = []
     Max = []
     for label2d in label2d_list:
