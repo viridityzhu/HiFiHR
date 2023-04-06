@@ -50,6 +50,8 @@ class Model(nn.Module):
         # Renderer
         if self.ifRender:
             # Define a renderer in pytorch3d
+            # Initialize a perspective camera.
+            cameras = p3d_renderer.cameras.PerspectiveCameras()
             # Rasterization settings for differentiable rendering, where the blur_radius
             # initialization is based on Liu et al, 'Soft Rasterizer: A Differentiable Renderer for Image-based 3D Reasoning', ICCV 2019
             sigma = 1e-4
@@ -71,8 +73,10 @@ class Model(nn.Module):
             #         lights=lights)
             # create a renderer object
             self.renderer_p3d = MeshRenderer(
-                rasterizer=MeshRasterizer(raster_settings=raster_settings_soft),
-                shader=SoftPhongShader(device=device),
+                rasterizer=MeshRasterizer(
+                    cameras=cameras, 
+                    raster_settings=raster_settings_soft),
+                shader=SoftPhongShader(device=device, cameras=cameras),
             )
 
 
