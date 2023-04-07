@@ -57,7 +57,8 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         # ** positions are relative to middle root.
         examples['joints'] = examples['joints'] - root_xyz
-        examples['verts'] = examples['verts'] - root_xyz
+        if 'verts' in examples:
+            examples['verts'] = examples['verts'] - root_xyz
 
         # Projection transformation, project joints to 2D
         if 'joints' in outputs:

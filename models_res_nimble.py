@@ -57,8 +57,9 @@ class Model(nn.Module):
             sigma = 1e-4
             raster_settings_soft = RasterizationSettings(
                 image_size=224, 
-                blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
-                faces_per_pixel=10, 
+                # blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
+                blur_radius=0.0, 
+                faces_per_pixel=2, 
                 # perspective_correct=False, 
             )
 
@@ -92,6 +93,7 @@ class Model(nn.Module):
                 }
             return outputs
         device = images.device
+        batch_size = images.shape[0]
         # Use base_encoder to extract features
         # low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
         _, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
@@ -138,26 +140,31 @@ class Model(nn.Module):
         outputs['joints'] = outputs['joints'] - pred_root_xyz
         outputs['mano_verts'] = outputs['mano_verts'] - pred_root_xyz
         if self.hand_model == 'nimble':
-            outputs['nimble_joints'] = outputs['nimble_joints'] - outputs['nimble_joints'][:, self.root_id_nimble, :].unsqueeze(1)
+            pred_root_xyz = outputs['nimble_joints'][:, self.root_id_nimble, :].unsqueeze(1)
+            outputs['nimble_joints'] = outputs['nimble_joints'] - pred_root_xyz
 
 
         # Render image
         if self.ifRender:
             # set up renderer parameters
-            self.renderer_p3d.cameras = p3d_renderer.cameras.PerspectiveCameras(K=Ks, device=device)
-            self.renderer_p3d.lighting = p3d_renderer.lighting.PointLights(
-                ambient_color=((1.0, 1.0, 1.0),),
-                diffuse_color=((0.0, 0.0, 0.0),),
-                specular_color=((0.0, 0.0, 0.0),),
-                location=((0.0, 0.0, 0.0),),
+            
+            k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
+            k_44[:, :3, :4] = Ks
+            cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, image_size=((224,224),)) # R and t are identity and zeros by default
+            lighting = p3d_renderer.lighting.PointLights(
+                # ambient_color=((1.0, 1.0, 1.0),),
+                # diffuse_color=((0.0, 0.0, 0.0),),
+                # specular_color=((0.0, 0.0, 0.0),),
+                # location=((0.0, 0.0, 0.0),),
                 device=device,
             )
 
             # render the image
             # move to the root relative coord. verts = verts - pred_root_xyz + root_xyz
             verts_num = outputs['skin_meshes']._num_verts_per_mesh[0]
-            outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(-1, 3)).offset_verts_(root_xyz.repeat(1, verts_num, 1).view(-1, 3))
-            rendered_images = self.renderer_p3d(outputs['skin_meshes'])
+            outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
+            outputs['skin_meshes'].offset_verts_(root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
+            rendered_images = self.renderer_p3d(outputs['skin_meshes'], cameras=cameras, lights=lighting)
 
             outputs['re_img'] = rendered_images[..., :3]
 
