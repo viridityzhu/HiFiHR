@@ -59,7 +59,8 @@ class Model(nn.Module):
                 image_size=224, 
                 # blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
                 blur_radius=0.0, 
-                faces_per_pixel=2, 
+                # blur_radius=0.002, 
+                faces_per_pixel=1, 
                 # perspective_correct=False, 
             )
 
@@ -150,7 +151,8 @@ class Model(nn.Module):
             
             k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
             k_44[:, :3, :4] = Ks
-            cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, image_size=((224,224),)) # R and t are identity and zeros by default
+            cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
+            # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device) # R and t are identity and zeros by default
             lighting = p3d_renderer.lighting.PointLights(
                 # ambient_color=((1.0, 1.0, 1.0),),
                 # diffuse_color=((0.0, 0.0, 0.0),),
@@ -165,6 +167,9 @@ class Model(nn.Module):
             outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
             outputs['skin_meshes'].offset_verts_(root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
             rendered_images = self.renderer_p3d(outputs['skin_meshes'], cameras=cameras, lights=lighting)
+
+            # import torchvision
+            # torchvision.utils.save_image(rendered_images[...,:3][1].permute(2,0,1),"test.png")
 
             outputs['re_img'] = rendered_images[..., :3]
 

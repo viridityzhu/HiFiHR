@@ -36,7 +36,6 @@
     "lambda_shape_list": [0.1, 0.001, 0.00001],
 
     "pretrain": "res101",
-    "pretrain_model": "outputs/freihand/shape/model/texturehand_latest.t7",
 
 
     "train_queries": ["trans_images","trans_Ks","trans_joints", "scales", "trans_verts"],
