@@ -124,12 +124,11 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
 
     # 51 Rendered RGB image
     if re_img is not None:
-        ax9.imshow(re_img[0].cpu().detach().numpy())
+        ax9.imshow(re_img[0].flip(dims=(0,1)).cpu().detach().numpy())
         ax9.set_title("Rendered Img", fontsize=ax_font_size)
     ax9.axis('off')
-   
 
-    
+
     plt.savefig(file_str,dpi=800)
 
     if writer is not None:
