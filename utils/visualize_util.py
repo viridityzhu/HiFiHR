@@ -30,10 +30,10 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
 
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}{}.png'.format(epoch, idx, evalName))
+    figs = ['ori_img', 'j2d', 'nimble_j2d', 'mano_j2d', ]
     fig = plt.figure()
-    ax1 = fig.add_subplot(331)
     ax2 = fig.add_subplot(332, projection='3d')
-    ax3 = fig.add_subplot(333, projection='3d')
+    ax_ori_img = fig.add_subplot(333)
     ax4 = fig.add_subplot(334)
 
     ax5 = fig.add_subplot(335, projection='3d')
@@ -46,6 +46,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
     
     ax_font_size = 6
     # 11 Image + GT 2D keypints
+    ax1 = fig.add_subplot(331)
     ax1.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
     ax1.set_title("Input Image", fontsize=ax_font_size)
     ax1.axis('off')
@@ -110,21 +111,25 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
     ax6.set_title("Pred 3D joints", fontsize=ax_font_size)
 
     # 43 & 44 Output 3d nimble joints
-    if nimble_joints is not None:
-        j3d_out = nimble_joints[0].detach().cpu().numpy()
-        plot_hand_3d(ax7, j3d_out, order='xyz', dataset_name='nimble')
-        if lims is not None:
-            ax7.set_xlim(lims[0],lims[1])
-            ax7.set_ylim(lims[2],lims[3])
-            ax7.set_zlim3d(lims[4],lims[5])
-        # 34 Output 3d joints
-        plot_hand_3d(ax3, j3d_out, order='xyz', dataset_name='nimble')
-    ax3.set_title("Pred 3D nimble joints (full size)", fontsize=ax_font_size)
+    # if nimble_joints is not None:
+    #     j3d_out = nimble_joints[0].detach().cpu().numpy()
+    #     plot_hand_3d(ax7, j3d_out, order='xyz', dataset_name='nimble')
+    #     if lims is not None:
+    #         ax7.set_xlim(lims[0],lims[1])
+    #         ax7.set_ylim(lims[2],lims[3])
+    #         ax7.set_zlim3d(lims[4],lims[5])
+    #     # 34 Output 3d joints
+    #     plot_hand_3d(ax3, j3d_out, order='xyz', dataset_name='nimble')
+    # ax3.set_title("Pred 3D nimble joints (full size)", fontsize=ax_font_size)
+    ax_ori_img.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+    ax_ori_img.set_title("Input Image", fontsize=ax_font_size)
+    ax_ori_img.axis('off')
     ax7.set_title("Pred 3D nimble joints", fontsize=ax_font_size)
 
     # 51 Rendered RGB image
     if re_img is not None:
-        ax9.imshow(re_img[0].flip(dims=(0,1)).cpu().detach().numpy())
+        # ax9.imshow(re_img[0].flip(dims=(0,1)).cpu().detach().numpy())
+        ax9.imshow(re_img[0].cpu().detach().numpy())
         ax9.set_title("Rendered Img", fontsize=ax_font_size)
     ax9.axis('off')
 

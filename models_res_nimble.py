@@ -82,8 +82,6 @@ class Model(nn.Module):
             )
 
 
-
-
     def forward(self, images, Ks=None, scale_gt=None, root_xyz=None):
         if self.hand_model == 'mano_new':
             pred = self.ytbHand(images)
@@ -149,9 +147,13 @@ class Model(nn.Module):
         if self.ifRender:
             # set up renderer parameters
             
-            k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
-            k_44[:, :3, :4] = Ks
-            cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
+            # k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
+            # k_44[:, :3, :4] = Ks
+            # get ndc fx, fy, cx, cy from Ks
+            fcl, prp = self.get_ndc_fx_fy_cx_cy(Ks)
+            # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
+            cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, principal_point=prp,
+                                                              device=device) # R and t are identity and zeros by default
             # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device) # R and t are identity and zeros by default
             lighting = p3d_renderer.lighting.PointLights(
                 # ambient_color=((1.0, 1.0, 1.0),),
@@ -175,3 +177,13 @@ class Model(nn.Module):
 
         return outputs
     
+    # get ndc fx, fy, cx, cy from Ks
+    def get_ndc_fx_fy_cx_cy(self, Ks):
+        ndc_fx = Ks[:, 0, 0] * 2 / 224.0
+        ndc_fy = Ks[:, 1, 1] * 2 / 224.0
+        ndc_px = - (Ks[:, 0, 2] - 112.0) * 2 / 224.0
+        ndc_py = - (Ks[:, 1, 2] - 112.0) * 2 / 224.0
+        focal_length = torch.stack([ndc_fx, ndc_fy], dim=-1)
+        principal_point = torch.stack([ndc_px, ndc_py], dim=-1)
+        return focal_length, principal_point
+        

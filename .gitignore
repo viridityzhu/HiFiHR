@@ -137,3 +137,5 @@ freihand/*
 *.zip
 outputs/*
 runs/*
+./test.*
+./img.png
