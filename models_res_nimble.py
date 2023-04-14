@@ -44,17 +44,12 @@ class Model(nn.Module):
             
         self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender, use_mean_shape=use_mean_shape)
 
-
         self.ifRender = ifRender
-
         # Renderer
         if self.ifRender:
             # Define a renderer in pytorch3d
-            # Initialize a perspective camera.
             cameras = p3d_renderer.cameras.PerspectiveCameras(device=device)
-            # Rasterization settings for differentiable rendering, where the blur_radius
-            # initialization is based on Liu et al, 'Soft Rasterizer: A Differentiable Renderer for Image-based 3D Reasoning', ICCV 2019
-            sigma = 1e-4
+            # sigma = 1e-4
             raster_settings_soft = RasterizationSettings(
                 image_size=224, 
                 # blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
@@ -64,21 +59,15 @@ class Model(nn.Module):
                 # perspective_correct=False, 
             )
 
-            # # Differentiable soft renderer using per vertex RGB colors for texture
-            # renderer_textured = MeshRenderer(
-            #     rasterizer=MeshRasterizer(
-            #         cameras=camera, 
-            #         raster_settings=raster_settings_soft
-            #     ),
-            #     shader=SoftPhongShader(device=device, 
-            #         cameras=camera,
-            #         lights=lights)
-            # create a renderer object
+            # # Differentiable soft renderer with SoftPhongShader
             self.renderer_p3d = MeshRenderer(
                 rasterizer=MeshRasterizer(
                     cameras=cameras, 
                     raster_settings=raster_settings_soft),
-                shader=SoftPhongShader(device=device, cameras=cameras),
+                shader=SoftPhongShader(
+                    device=device, 
+                    cameras=cameras
+                ),
             )
 
 
@@ -146,15 +135,17 @@ class Model(nn.Module):
         # Render image
         if self.ifRender:
             # set up renderer parameters
-            
+            # !depreciated. a screen camera seems to be blurry. Convert Ks to ndc instead.
             # k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
             # k_44[:, :3, :4] = Ks
+            # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
+
             # get ndc fx, fy, cx, cy from Ks
             fcl, prp = self.get_ndc_fx_fy_cx_cy(Ks)
-            # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
-            cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, principal_point=prp,
+            cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, 
+                                                              principal_point=prp,
                                                               device=device) # R and t are identity and zeros by default
-            # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device) # R and t are identity and zeros by default
+            # TODO: add lighting estimator
             lighting = p3d_renderer.lighting.PointLights(
                 # ambient_color=((1.0, 1.0, 1.0),),
                 # diffuse_color=((0.0, 0.0, 0.0),),
@@ -163,17 +154,19 @@ class Model(nn.Module):
                 device=device,
             )
 
-            # render the image
-            # move to the root relative coord. verts = verts - pred_root_xyz + root_xyz
+            # move to the root relative coord. 
+            # verts = verts - pred_root_xyz + root_xyz
             verts_num = outputs['skin_meshes']._num_verts_per_mesh[0]
             outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
             outputs['skin_meshes'].offset_verts_(root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
+
+            # render the image
             rendered_images = self.renderer_p3d(outputs['skin_meshes'], cameras=cameras, lights=lighting)
 
             # import torchvision
             # torchvision.utils.save_image(rendered_images[...,:3][1].permute(2,0,1),"test.png")
 
-            outputs['re_img'] = rendered_images[..., :3]
+            outputs['re_img'] = rendered_images[..., :3] # the last dim is alpha
 
         return outputs
     
