@@ -30,108 +30,126 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
 
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}{}.png'.format(epoch, idx, evalName))
-    figs = ['ori_img', 'j2d', 'nimble_j2d', 'mano_j2d', ]
+    # list of all used figs
+    fig_names = ['ori_img', 'j2d_gt', 'nimble_j2d', 'mano_j2d', 'j3d', 
+            'nimble_j3d', 'mano_j3d', 'mask_gt', 'mask_rgb', 'render_sil', 
+            'render_into_ori', 'render_img', ]
+    fig_3d = ['j3d', 'nimble_j3d', 'mano_j3d']
+    Tot = len(fig_names)
+    Cols = 5
+    # Compute Rows required
+    Rows = Tot // Cols 
+    if Tot % Cols != 0:
+        Rows += 1
+    # Create a Position index
+    Position = range(1,Tot + 1)
     fig = plt.figure()
-    ax2 = fig.add_subplot(332, projection='3d')
-    ax_ori_img = fig.add_subplot(333)
-    ax4 = fig.add_subplot(334)
-
-    ax5 = fig.add_subplot(335, projection='3d')
-    ax6 = fig.add_subplot(336, projection='3d')
-    ax7 = fig.add_subplot(337, projection='3d')
-    ax8 = fig.add_subplot(338)
-
-    ax9 = fig.add_subplot(339)
-    
-    
     ax_font_size = 6
-    # 11 Image + GT 2D keypints
-    ax1 = fig.add_subplot(331)
-    ax1.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
-    ax1.set_title("Input Image", fontsize=ax_font_size)
-    ax1.axis('off')
-    if j2d_gt is not None:
-        uv = j2d_gt[0].detach().cpu().numpy()
-        plot_hand(ax1, uv, order='uv', dataset_name='FreiHand')
+    for i, fig_name in enumerate(fig_names):
+        if fig_name in fig_3d:
+            ax = fig.add_subplot(Rows, Cols, i+1, projection='3d')
+        else:
+            ax = fig.add_subplot(Rows, Cols, i+1)
 
+        if fig_name == 'ori_img':
+            # 11 Image + GT 2D keypints
+            ax.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+            ax.set_title("Input Image", fontsize=ax_font_size)
+            ax.axis('off')
+        elif fig_name == 'j2d_gt':
+            ax.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+            ax.set_title("GT 2D Joints", fontsize=ax_font_size)
+            ax.axis('off')
+            if j2d_gt is not None:
+                uv = j2d_gt[0].detach().cpu().numpy()
+                plot_hand(ax, uv, order='uv', dataset_name='FreiHand')
+        elif fig_name == 'nimble_j2d':
 
-    # 12 GT mask
-    # if masks is not None:
-    #     ax2.imshow(masks[0].cpu().permute(1,2,0).numpy())
-    #     ax2.set_title("GT mask", fontsize=ax_font_size)
-    # ax2.axis('off')
-    ax4.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
-    if nimble_j2d is not None:
-        uv_out = nimble_j2d[0].detach().cpu().numpy()
-        #plot_hand(ax5, uv_out, order='uv', dataset_name=dataset_name)
-        plot_hand(ax4, uv_out, order='uv', dataset_name='nimble')
-    ax4.set_title("Pred nimble joints", fontsize=ax_font_size)
-    ax4.axis('off')
-
-
-    # 21 Image + output 2D keypints
-    ax8.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
-    if j2d is not None:
-        uv_out = j2d[0].detach().cpu().numpy()
-        #plot_hand(ax8, uv_out, order='uv', dataset_name=dataset_name)
-        plot_hand(ax8, uv_out, order='uv')
-    ax8.set_title("Pred joints", fontsize=ax_font_size)
-    ax8.axis('off')
-
-
-    # 33 GT 3d Joints
-    lims = None
-    if joints_gt is not None:
-        j3d_gt = joints_gt[0].detach().cpu().numpy()
-        xlim_min = joints_gt[0,:,0].min()*1.25- joints_gt[0,:,0].max()*0.25
-        xlim_max = joints_gt[0,:,0].max()*1.25- joints_gt[0,:,0].min()*0.25
-        ylim_min = joints_gt[0,:,1].min()*1.25- joints_gt[0,:,1].max()*0.25
-        ylim_max = joints_gt[0,:,1].max()*1.25- joints_gt[0,:,1].min()*0.25
-        zlim_min = joints_gt[0,:,2].min()*1.25- joints_gt[0,:,2].max()*0.25
-        zlim_max = joints_gt[0,:,2].max()*1.25- joints_gt[0,:,2].min()*0.25
-        lims = [xlim_min.cpu().numpy(), xlim_max.cpu().numpy(), ylim_min.cpu().numpy(), ylim_max.cpu().numpy(), zlim_min.cpu().numpy(), zlim_max.cpu().numpy()]
-        #ax9=Axes3D(ax9)
-        plot_hand_3d(ax5, j3d_gt, order='xyz')
-        ax5.set_xlim(lims[0],lims[1])
-        ax5.set_ylim(lims[2],lims[3])
-        ax5.set_zlim3d(lims[4],lims[5])
-    ax5.set_title("GT 3D joints", fontsize=ax_font_size)
-
-    # 32 & 34 Output 3d joints
-    if joints is not None:
-        j3d_out = joints[0].detach().cpu().numpy()
-        plot_hand_3d(ax6, j3d_out, order='xyz')
-        if lims is not None:
-            ax6.set_xlim(lims[0],lims[1])
-            ax6.set_ylim(lims[2],lims[3])
-            ax6.set_zlim3d(lims[4],lims[5])
-        # 34 Output 3d joints
-        plot_hand_3d(ax2, j3d_out, order='xyz')
-    ax2.set_title("Pred 3D joints (full size)", fontsize=ax_font_size)
-    ax6.set_title("Pred 3D joints", fontsize=ax_font_size)
-
-    # 43 & 44 Output 3d nimble joints
-    # if nimble_joints is not None:
-    #     j3d_out = nimble_joints[0].detach().cpu().numpy()
-    #     plot_hand_3d(ax7, j3d_out, order='xyz', dataset_name='nimble')
-    #     if lims is not None:
-    #         ax7.set_xlim(lims[0],lims[1])
-    #         ax7.set_ylim(lims[2],lims[3])
-    #         ax7.set_zlim3d(lims[4],lims[5])
-    #     # 34 Output 3d joints
-    #     plot_hand_3d(ax3, j3d_out, order='xyz', dataset_name='nimble')
-    # ax3.set_title("Pred 3D nimble joints (full size)", fontsize=ax_font_size)
-    ax_ori_img.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
-    ax_ori_img.set_title("Input Image", fontsize=ax_font_size)
-    ax_ori_img.axis('off')
-    ax7.set_title("Pred 3D nimble joints", fontsize=ax_font_size)
-
-    # 51 Rendered RGB image
-    if re_img is not None:
-        # ax9.imshow(re_img[0].flip(dims=(0,1)).cpu().detach().numpy())
-        ax9.imshow(re_img[0].cpu().detach().numpy())
-        ax9.set_title("Rendered Img", fontsize=ax_font_size)
-    ax9.axis('off')
+            ax.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+            if nimble_j2d is not None:
+                uv_out = nimble_j2d[0].detach().cpu().numpy()
+                plot_hand(ax, uv_out, order='uv', dataset_name='nimble')
+            ax.set_title("Pred NIMBLE Joints", fontsize=ax_font_size)
+            ax.axis('off')
+        elif fig_name == 'mano_j2d':
+            # 21 Image + output 2D keypints
+            ax.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+            if j2d is not None:
+                uv_out = j2d[0].detach().cpu().numpy()
+                plot_hand(ax, uv_out, order='uv')
+            ax.set_title("Pred MANO Joints", fontsize=ax_font_size)
+            ax.axis('off')
+        elif fig_name == 'j3d':
+            # 33 GT 3d Joints
+            lims = None
+            if joints_gt is not None:
+                j3d_gt = joints_gt[0].detach().cpu().numpy()
+                xlim_min = joints_gt[0,:,0].min()*1.25- joints_gt[0,:,0].max()*0.25
+                xlim_max = joints_gt[0,:,0].max()*1.25- joints_gt[0,:,0].min()*0.25
+                ylim_min = joints_gt[0,:,1].min()*1.25- joints_gt[0,:,1].max()*0.25
+                ylim_max = joints_gt[0,:,1].max()*1.25- joints_gt[0,:,1].min()*0.25
+                zlim_min = joints_gt[0,:,2].min()*1.25- joints_gt[0,:,2].max()*0.25
+                zlim_max = joints_gt[0,:,2].max()*1.25- joints_gt[0,:,2].min()*0.25
+                lims = [xlim_min.cpu().numpy(), xlim_max.cpu().numpy(), ylim_min.cpu().numpy(), ylim_max.cpu().numpy(), zlim_min.cpu().numpy(), zlim_max.cpu().numpy()]
+                #ax9=Axes3D(ax9)
+                plot_hand_3d(ax, j3d_gt, order='xyz')
+                ax.set_xlim(lims[0],lims[1])
+                ax.set_ylim(lims[2],lims[3])
+                ax.set_zlim3d(lims[4],lims[5])
+            ax.set_title("GT 3D joints", fontsize=ax_font_size)
+        elif fig_name == 'nimble_j3d':
+            # 43 & 44 Output 3d nimble joints
+            if nimble_joints is not None:
+                j3d_out = nimble_joints[0].detach().cpu().numpy()
+                plot_hand_3d(ax, j3d_out, order='xyz', dataset_name='nimble')
+                if lims is not None:
+                    ax.set_xlim(lims[0],lims[1])
+                    ax.set_ylim(lims[2],lims[3])
+                    ax.set_zlim3d(lims[4],lims[5])
+            ax.set_title("Pred 3D nimble joints", fontsize=ax_font_size)
+        elif fig_name == 'mano_j3d':
+            # 32 & 34 Output 3d joints
+            if joints is not None:
+                j3d_out = joints[0].detach().cpu().numpy()
+                plot_hand_3d(ax, j3d_out, order='xyz')
+                if lims is not None:
+                    ax.set_xlim(lims[0],lims[1])
+                    ax.set_ylim(lims[2],lims[3])
+                    ax.set_zlim3d(lims[4],lims[5])
+            ax.set_title("Pred 3D joints", fontsize=ax_font_size)
+        elif fig_name == 'mask_gt':
+            # 12 GT mask
+            if masks is not None:
+                ax.imshow(masks[0].cpu().permute(1,2,0).numpy())
+                ax.set_title("GT mask", fontsize=ax_font_size)
+            ax.axis('off')
+        elif fig_name == 'mask_rgb':
+            # 13 GT maskRGB image
+            if maskRGBs is not None:
+                ax.imshow(maskRGBs[0].cpu().permute(1,2,0).numpy())
+                ax.set_title("GT masked image", fontsize=ax_font_size)
+            ax.axis('off')
+        elif fig_name == 'render_sil':
+            # 22 Rendered mask
+            if re_sil is not None:
+                re_sil = re_sil[0].repeat(1, 1, 3)
+                ax.imshow(re_sil.cpu().detach().permute(1,2,0).numpy())
+                ax.set_title("Rendered Mask", fontsize=ax_font_size)
+            ax.axis('off')
+        elif fig_name == 'render_into_ori':
+            if re_sil is not None and re_img is not None:
+                re_sil = re_sil[0].repeat(1, 1, 3)
+                re_img = re_img[0]
+                render_into_ori = re_img * re_sil + imgs[0] * (1 - re_sil)
+                ax.imshow(render_into_ori.cpu().detach().numpy())
+                ax.set_title("Rendered into original", fontsize=ax_font_size)
+        elif fig_name == 'render_img':
+            # 51 Rendered RGB image
+            if re_img is not None:
+                # ax9.imshow(re_img[0].flip(dims=(0,1)).cpu().detach().numpy())
+                ax.imshow(re_img[0].cpu().detach().numpy())
+                ax.set_title("Rendered Img", fontsize=ax_font_size)
+            ax.axis('off')
 
 
     plt.savefig(file_str,dpi=800)
