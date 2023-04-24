@@ -282,6 +282,23 @@ def bone_direction_loss(j2d, open_2dj, open_2dj_con):
     bone_direction_loss = torch.mean(torch.sum((bone_vec_nm-bone_vec_open_nm)**2,1).mul(confs))
     return bone_direction_loss
 
+def edge_length_loss(pred, gt, face):
+
+    d1_out = torch.sqrt(torch.sum((pred[:, face[:, 0], :] - pred[:, face[:, 1], :]) ** 2, 2, keepdim=True))
+    d2_out = torch.sqrt(torch.sum((pred[:, face[:, 0], :] - pred[:, face[:, 2], :]) ** 2, 2, keepdim=True))
+    d3_out = torch.sqrt(torch.sum((pred[:, face[:, 1], :] - pred[:, face[:, 2], :]) ** 2, 2, keepdim=True))
+
+    d1_gt = torch.sqrt(torch.sum((gt[:, face[:, 0], :] - gt[:, face[:, 1], :]) ** 2, 2, keepdim=True))
+    d2_gt = torch.sqrt(torch.sum((gt[:, face[:, 0], :] - gt[:, face[:, 2], :]) ** 2, 2, keepdim=True))
+    d3_gt = torch.sqrt(torch.sum((gt[:, face[:, 1], :] - gt[:, face[:, 2], :]) ** 2, 2, keepdim=True))
+
+    diff1 = torch.abs(d1_out - d1_gt)
+    diff2 = torch.abs(d2_out - d2_gt)
+    diff3 = torch.abs(d3_out - d3_gt)
+    loss = torch.cat((diff1, diff2, diff3), 1)
+
+    return loss.mean()   
+
 
 class ChamferLoss(nn.Module):
     def __init__(self):

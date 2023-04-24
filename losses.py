@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as torch_f
 
 import utils.pytorch_ssim as pytorch_ssim
-from utils.losses_util import bone_direction_loss, tsa_pose_loss, calc_laplacian_loss#image_l1_loss, iou_loss, ChamferLoss,
+from utils.losses_util import bone_direction_loss, tsa_pose_loss, calc_laplacian_loss, edge_length_loss#image_l1_loss, iou_loss, ChamferLoss,
 
 # !depreciated
 def loss_func(examples, outputs, loss_used, dat_name, args) -> dict:
@@ -264,6 +264,13 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
         bone_direc_loss = bone_direction_loss(outputs['j2d'], examples['j2d_gt'], j2d_con)
         bone_direc_loss = args.lambda_bone_direc * bone_direc_loss
         loss_dic['bone_direc'] = bone_direc_loss
+    
+    # (used in full supervision) 3d verts length loss of a given face. 3dv -> gt 3dv
+    if 'edge_length' in loss_used:
+        assert ('mano_verts' in outputs) and ('verts' in examples) and ('mano_faces' in outputs), "Using edge_length but verts or faces not outputted."
+        edge_len_loss = edge_length_loss(outputs['mano_verts'], examples['verts'], outputs['mano_faces'])
+        edge_len_loss = args.lambda_edge_len * edge_len_loss
+        loss_dic['edge_length'] = edge_len_loss
     
 
     # mean scale regularization term

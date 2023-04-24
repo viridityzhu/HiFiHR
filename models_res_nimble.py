@@ -1,6 +1,8 @@
+import pickle
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 import os
 import math
@@ -49,6 +51,10 @@ class Model(nn.Module):
             self.hand_layer = MyMANOLayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
             
         self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender, use_mean_shape=use_mean_shape)
+
+        MANO_file = os.path.join(os.path.dirname(os.path.dirname(__file__)),'data/MANO_RIGHT.pkl')
+        dd = pickle.load(open(MANO_file, 'rb'),encoding='latin1')
+        self.mano_face = Variable(torch.from_numpy(np.expand_dims(dd['f'],0).astype(np.int16)).to(device=devices))
 
         self.ifRender = ifRender
         self.aa_factor = 3
@@ -111,7 +117,7 @@ class Model(nn.Module):
         # outputs = {
         #     'nimble_joints': bone_joints, # 25 joints
         #     'verts': skin_v, # 5990 verts
-        #     'faces': faces,
+        #     'faces': None #faces,
         #     'skin_meshes': skin_v_smooth, # smoothed verts and faces
         #     'mano_verts': skin_mano_v, # 5990 -> 778 verts according to mano
         #     'textures': tex_img,
@@ -131,6 +137,7 @@ class Model(nn.Module):
         else: # nimble
             # Mano joints map to Frei joints
             outputs['joints'] = Mano2Frei(outputs['joints'])
+        
 
         # ** offset positions relative to root.
         pred_root_xyz = outputs['joints'][:, self.root_id, :].unsqueeze(1)
@@ -179,6 +186,9 @@ class Model(nn.Module):
             # torchvision.utils.save_image(rendered_images[...,:3][1].permute(2,0,1),"test.png")
 
             outputs['re_img'] = rendered_images[..., :3] # the last dim is alpha
+        
+        # add mano faces to outputs (used in losses)
+        outputs['mano_faces'] = self.mano_face.repeat(batch_size, 1, 1)
 
         return outputs
     
