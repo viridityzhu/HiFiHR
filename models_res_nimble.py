@@ -8,7 +8,13 @@ import time
 
 import numpy as np
 import pytorch3d
-from pytorch3d.renderer import RasterizationSettings, MeshRenderer, MeshRasterizer, SoftPhongShader
+from pytorch3d.renderer import (
+    RasterizationSettings,
+    MeshRenderer, 
+    MeshRasterizer,
+    HardPhongShader,
+    Materials
+)
 import pytorch3d.renderer as p3d_renderer
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
@@ -45,28 +51,31 @@ class Model(nn.Module):
         self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender, use_mean_shape=use_mean_shape)
 
         self.ifRender = ifRender
+        self.aa_factor = 3
         # Renderer
         if self.ifRender:
             # Define a renderer in pytorch3d
-            cameras = p3d_renderer.cameras.PerspectiveCameras(device=device)
-            # sigma = 1e-4
             raster_settings_soft = RasterizationSettings(
-                image_size=224, 
-                # blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
+                image_size=224 * self.aa_factor, 
                 blur_radius=0.0, 
-                # blur_radius=0.002, 
                 faces_per_pixel=1, 
-                # perspective_correct=False, 
+            )
+            materials = Materials(
+                # ambient_color=((0.9, 0.9, 0.9),),
+                diffuse_color=((0.8, 0.8, 0.8),),
+                specular_color=((0.2, 0.2, 0.2),),
+                shininess=30,
+                device=device,
             )
 
             # # Differentiable soft renderer with SoftPhongShader
             self.renderer_p3d = MeshRenderer(
                 rasterizer=MeshRasterizer(
-                    cameras=cameras, 
-                    raster_settings=raster_settings_soft),
-                shader=SoftPhongShader(
+                    raster_settings=raster_settings_soft
+                ),
+                shader=HardPhongShader(
+                    materials=materials,
                     device=device, 
-                    cameras=cameras
                 ),
             )
 
@@ -135,16 +144,15 @@ class Model(nn.Module):
         # Render image
         if self.ifRender:
             # set up renderer parameters
-            # !depreciated. a screen camera seems to be blurry. Convert Ks to ndc instead.
-            # k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
-            # k_44[:, :3, :4] = Ks
-            # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
+            k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
+            k_44[:, :3, :4] = Ks
+            cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
 
-            # get ndc fx, fy, cx, cy from Ks
-            fcl, prp = self.get_ndc_fx_fy_cx_cy(Ks)
-            cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, 
-                                                              principal_point=prp,
-                                                              device=device) # R and t are identity and zeros by default
+            # # get ndc fx, fy, cx, cy from Ks
+            # fcl, prp = self.get_ndc_fx_fy_cx_cy(Ks)
+            # cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, 
+            #                                                   principal_point=prp,
+            #                                                   device=device) # R and t are identity and zeros by default
             # TODO: add lighting estimator
             lighting = p3d_renderer.lighting.PointLights(
                 # ambient_color=((1.0, 1.0, 1.0),),
@@ -162,6 +170,10 @@ class Model(nn.Module):
 
             # render the image
             rendered_images = self.renderer_p3d(outputs['skin_meshes'], cameras=cameras, lights=lighting)
+            # average pooling to downsample the rendered image (anti-aliasing)
+            rendered_images = rendered_images.permute(0, 3, 1, 2)  # NHWC -> NCHW
+            rendered_images = F.avg_pool2d(rendered_images, kernel_size=self.aa_factor, stride=self.aa_factor)
+            rendered_images = rendered_images.permute(0, 2, 3, 1)  # NCHW -> NHWC
 
             # import torchvision
             # torchvision.utils.save_image(rendered_images[...,:3][1].permute(2,0,1),"test.png")
