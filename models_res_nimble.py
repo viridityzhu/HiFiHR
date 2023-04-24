@@ -60,7 +60,7 @@ class Model(nn.Module):
         self.aa_factor = 3
         # Renderer
         if self.ifRender:
-            # Define a renderer in pytorch3d
+            # Define a RGB renderer with HardPhongShader in pytorch3d
             raster_settings_soft = RasterizationSettings(
                 image_size=224 * self.aa_factor, 
                 blur_radius=0.0, 
@@ -74,7 +74,7 @@ class Model(nn.Module):
                 device=device,
             )
 
-            # # Differentiable soft renderer with SoftPhongShader
+            # Differentiable soft renderer with SoftPhongShader
             self.renderer_p3d = MeshRenderer(
                 rasterizer=MeshRasterizer(
                     raster_settings=raster_settings_soft
@@ -186,6 +186,8 @@ class Model(nn.Module):
             # torchvision.utils.save_image(rendered_images[...,:3][1].permute(2,0,1),"test.png")
 
             outputs['re_img'] = rendered_images[..., :3] # the last dim is alpha
+            outputs['re_sil'] = rendered_images[..., 3:4] # the last dim is alpha
+            outputs['maskRGBs'] = images.mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
         
         # add mano faces to outputs (used in losses)
         outputs['mano_faces'] = self.mano_face.repeat(batch_size, 1, 1)
