@@ -118,7 +118,9 @@ def get_parser():
     # parser.add_argument('--lambda_pose', type=float, default=1e-1)#0.001
     parser.add_argument('--lambda_pose_list', type=list, default=[0.00001])#0.001
     parser.add_argument('--lambda_pose_steps', type=list, default=[])#0.001
-    parser.add_argument('--lambda_tex_reg', type=float, default=5e-3)# std: 1e-4
+    # parser.add_argument('--lambda_tex_reg', type=float, default=5e-3)# std: 1e-4
+    parser.add_argument('--lambda_tex_reg_list', type=list, default=[0.00001])#0.001
+    parser.add_argument('--lambda_tex_reg_steps', type=list, default=[])#0.001
     parser.add_argument('--lambda_pca_text', type=float, default=1e-6)
     parser.add_argument('--lambda_mrgb', type=float, default=1e-3)
     parser.add_argument('--lambda_bone_direc', type=float, default=0.1)

@@ -330,6 +330,9 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                 for i, lambda_shape_step in enumerate(args.lambda_shape_steps):
                     if lambda_shape_step <= epoch + current_epoch:
                         args.lambda_shape = args.lambda_shape_list[i + 1]
+                for i, lambda_tex_reg_step in enumerate(args.lambda_tex_reg_steps):
+                    if lambda_tex_reg_step <= epoch + current_epoch:
+                        args.lambda_tex_reg = args.lambda_tex_reg_list[i + 1]
 
                 status.update(status="Training...", spinner="monkey")
                 mode_train = True
@@ -383,6 +386,7 @@ if __name__ == '__main__':
     args.lambda_pose = args.lambda_pose_list[0]
     args.lambda_shape = args.lambda_shape_list[0]
     args.lambda_j2d_gt = args.lambda_j2d_gt_list[0]
+    args.lambda_tex_reg = args.lambda_tex_reg_list[0]
 
     if args.is_write_tb:
         log_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),

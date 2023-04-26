@@ -44,7 +44,9 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
     # Create a Position index
     Position = range(1,Tot + 1)
     fig = plt.figure()
+    # fig.text(20, 4, "Input Image", fontsize=ax_font_size)
     ax_font_size = 6
+    plt.rcParams.update({'font.size': ax_font_size})
     for i, fig_name in enumerate(fig_names):
         if fig_name in fig_3d:
             ax = fig.add_subplot(Rows, Cols, i+1, projection='3d')
