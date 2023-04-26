@@ -125,14 +125,14 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 prefix_test = '[bold yellow]Test [/bold yellow]'
             else:
                 prefix_test = ''
-            console.log('{prefix_test}Epoch: {0}\t'
+            console.log('{prefix_test}Epoch: [{0}/{tot_epoch}]\t'
                 'Iter: [{1}/{2}]\t'
                 'Time {batch_time.val:.3f}\t'
                 '[bold red]Loss {loss:.5f}[/bold red]\t'
                 'dataset: {dataset:6}\t'
                 'lr {lr:.7f}\t'.format(epoch, idx, len(train_loader),
                                         batch_time=batch_time, loss=loss.data.item(), dataset=dat_name,
-                                        lr=lr_current, prefix_test=prefix_test))
+                                        lr=lr_current, prefix_test=prefix_test, tot_epoch=args.total_epochs))
             console.log(f"Loss backward:\t{', '.join(['{0}: {1:6f}'.format(loss_item,loss_data.sum()) for loss_item,loss_data in loss_dic.items() if (loss_item in loss_used)])}")
 
             #print("Loss all:\t",['{0}:{1:6f};'.format(loss_item, loss_dic[loss_item].sum().data.item()) for loss_item in loss_dic])
@@ -416,6 +416,8 @@ if __name__ == '__main__':
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
     
     model, current_epoch, optimizer, scheduler = load_model(model, optimizer, scheduler, args)
+    if args.force_init_lr > 0: # default is -1, means not using this
+        optimizer.param_groups[0]['lr'] = args.force_init_lr
 
     model = nn.DataParallel(model.cuda())
 

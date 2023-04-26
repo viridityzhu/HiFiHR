@@ -145,6 +145,8 @@ def get_parser():
 
     parser.add_argument('--total_epochs',type=int,default=100)
     parser.add_argument('--init_lr',type=float,default=0.001)
+    parser.add_argument('--force_init_lr',type=float,default=-1)
+    
     parser.add_argument('--lr_steps',type=list,default=[50])
     parser.add_argument('--lr_gamma',type=float,default=0.001)
 
