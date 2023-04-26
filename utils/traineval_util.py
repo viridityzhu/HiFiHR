@@ -80,13 +80,13 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
         if 'verts' in data_batch.keys():
             verts = data_batch['verts'].cuda()
             example_torch['verts'] = verts
+        if 'masks' in data_batch.keys():
+            masks = data_batch['masks'].cuda()#[b,3,224,224]
+            example_torch['masks'] = masks
+            #maskRGBs = data_batch['maskRGBs'].cuda()#[b,3,224,224]
+            segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
+            example_torch['segms_gt'] = segms_gt
         if 'training' in set_name:
-            if 'masks' in data_batch.keys():
-                masks = data_batch['masks'].cuda()#[b,3,224,224]
-                example_torch['masks'] = masks
-                #maskRGBs = data_batch['maskRGBs'].cuda()#[b,3,224,224]
-                segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
-                example_torch['segms_gt'] = segms_gt
             
             if 'trans_masks' in data_batch.keys():
                 masks = data_batch['trans_masks'].cuda()#[b,3,224,224]
