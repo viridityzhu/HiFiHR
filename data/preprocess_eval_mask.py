@@ -30,9 +30,10 @@ for segmap_file in segmap_files:
     
     # Create the binary mask
     binary_mask = create_binary_mask(segmap_image)
+    img2 = cv2.merge((binary_mask,binary_mask,binary_mask))
     
     # Save the binary mask in the 'mask' folder
     mask_file = os.path.join(freihand_eval_root, 'mask', segmap_file.replace('.png', '.jpg'))
-    cv2.imwrite(mask_file, binary_mask * 255)
+    cv2.imwrite(mask_file, img2 * 255)
 
 print("Binary masks generated in the 'mask' folder.")
