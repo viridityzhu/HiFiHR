@@ -295,7 +295,8 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
     # photometric loss
     if 're_img' in outputs and ('re_sil' in outputs):
         maskRGBs = outputs['maskRGBs']#examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
-        re_img = outputs['re_img']
+        # re_img needs to be masked by re_sil!!!
+        re_img = outputs['re_img'] * (outputs['re_sil']/255.0).repeat(1,3,1,1)
         crit = nn.L1Loss()
 
         # texture loss: rendered img -> masked original img
@@ -331,7 +332,7 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
     # (fully supervision) silhouette loss: rendered sil -> gt sil
     if 're_sil' in outputs and 'segms_gt' in examples:
         crit = nn.L1Loss()
-        sil_loss = crit(outputs['re_sil'].squeeze(), examples['segms_gt'].float())
+        sil_loss = crit(outputs['re_sil'], examples['segms_gt'].unsqueeze(1).float())
         loss_dic['sil'] = args.lambda_silhouette * sil_loss
 
     # perceptual loss: rendered img -> gt img. not used at all.
