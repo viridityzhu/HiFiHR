@@ -52,9 +52,9 @@ class Model(nn.Module):
             
         self.hand_encoder = HandEncoder(hand_model=hand_model, ncomps=self.ncomps, in_dim=self.features_dim, ifRender=ifRender, use_mean_shape=use_mean_shape)
 
-        MANO_file = os.path.join(os.path.dirname(os.path.dirname(__file__)),'data/MANO_RIGHT.pkl')
+        MANO_file = os.path.join(os.path.dirname(__file__),'data/MANO_RIGHT.pkl')
         dd = pickle.load(open(MANO_file, 'rb'),encoding='latin1')
-        self.mano_face = Variable(torch.from_numpy(np.expand_dims(dd['f'],0).astype(np.int16)).to(device=devices))
+        self.mano_face = Variable(torch.from_numpy(np.expand_dims(dd['f'],0).astype(np.int16)).to(device=device))
 
         self.ifRender = ifRender
         self.aa_factor = 3
@@ -180,15 +180,15 @@ class Model(nn.Module):
             # average pooling to downsample the rendered image (anti-aliasing)
             rendered_images = rendered_images.permute(0, 3, 1, 2)  # NHWC -> NCHW
             rendered_images = F.avg_pool2d(rendered_images, kernel_size=self.aa_factor, stride=self.aa_factor)
-            rendered_images = rendered_images.permute(0, 2, 3, 1)  # NCHW -> NHWC
+            # rendered_images = rendered_images.permute(0, 2, 3, 1)  # NCHW -> NHWC
 
             # import torchvision
             # torchvision.utils.save_image(rendered_images[...,:3][1].permute(2,0,1),"test.png")
 
-            outputs['re_img'] = rendered_images[..., :3] # the last dim is alpha
-            outputs['re_sil'] = rendered_images[..., 3:4] # the last dim is alpha
+            outputs['re_img'] = rendered_images[:, :3, :, :] # the last dim is alpha
+            outputs['re_sil'] = rendered_images[:, 3:4, :, :] # the last dim is alpha
             outputs['re_sil'][outputs['re_sil'] > 0] = 255  # Binarize segmentation mask
-            outputs['maskRGBs'] = images.mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
+            outputs['maskRGBs'] = images.mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
         
         # add mano faces to outputs (used in losses)
         outputs['mano_faces'] = self.mano_face.repeat(batch_size, 1, 1)

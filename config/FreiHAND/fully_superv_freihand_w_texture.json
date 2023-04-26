@@ -12,7 +12,7 @@
     "save_interval": 30,
     "controlled_exp": false,
     "controlled_size": 1000,
-    "train_batch":80,
+    "train_batch":16,
     "val_batch":16,
     "num_workers":8,
     "if_test": true,

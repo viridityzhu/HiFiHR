@@ -283,6 +283,7 @@ def bone_direction_loss(j2d, open_2dj, open_2dj_con):
     return bone_direction_loss
 
 def edge_length_loss(pred, gt, face):
+    face = face[0].cpu().numpy().astype(np.int16)
 
     d1_out = torch.sqrt(torch.sum((pred[:, face[:, 0], :] - pred[:, face[:, 1], :]) ** 2, 2, keepdim=True))
     d2_out = torch.sqrt(torch.sum((pred[:, face[:, 0], :] - pred[:, face[:, 2], :]) ** 2, 2, keepdim=True))
