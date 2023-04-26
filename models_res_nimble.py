@@ -151,15 +151,15 @@ class Model(nn.Module):
         # Render image
         if self.ifRender:
             # set up renderer parameters
-            k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
-            k_44[:, :3, :4] = Ks
-            cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
+            # k_44 = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
+            # k_44[:, :3, :4] = Ks
+            # cameras = p3d_renderer.cameras.PerspectiveCameras(K=k_44, device=device, in_ndc=False, image_size=((224,224),)) # R and t are identity and zeros by default
 
-            # # get ndc fx, fy, cx, cy from Ks
-            # fcl, prp = self.get_ndc_fx_fy_cx_cy(Ks)
-            # cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, 
-            #                                                   principal_point=prp,
-            #                                                   device=device) # R and t are identity and zeros by default
+            # get ndc fx, fy, cx, cy from Ks
+            fcl, prp = self.get_ndc_fx_fy_cx_cy(Ks)
+            cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, 
+                                                              principal_point=prp,
+                                                              device=device) # R and t are identity and zeros by default
             # TODO: add lighting estimator
             lighting = p3d_renderer.lighting.PointLights(
                 # ambient_color=((1.0, 1.0, 1.0),),
@@ -186,7 +186,7 @@ class Model(nn.Module):
             # torchvision.utils.save_image(rendered_images[...,:3][1].permute(2,0,1),"test.png")
 
             outputs['re_img'] = rendered_images[:, :3, :, :] # the last dim is alpha
-            outputs['re_sil'] = rendered_images[:, 3:4, :, :] # the last dim is alpha
+            outputs['re_sil'] = rendered_images[:, 3:4, :, :] # [B, 1, w, h]. the last dim is alpha
             outputs['re_sil'][outputs['re_sil'] > 0] = 255  # Binarize segmentation mask
             outputs['maskRGBs'] = images.mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
         

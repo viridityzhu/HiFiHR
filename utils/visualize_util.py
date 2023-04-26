@@ -134,22 +134,23 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             if re_sil is not None:
                 re_sil_0 = re_sil[0].repeat(3, 1, 1)
                 ax.imshow(re_sil_0.cpu().detach().permute(1,2,0).numpy())
-                ax.set_title("Rendered Mask", fontsize=ax_font_size)
+            ax.set_title("Rendered Mask", fontsize=ax_font_size)
             ax.axis('off')
         elif fig_name == 'render_into_ori':
-            if re_sil is not None and re_img is not None:
-                re_sil_0 = re_sil[0][re_sil[0] > 0].float().repeat(3, 1, 1)
+            if re_img is not None:
+                # re_sil_0 = (re_sil[0] > 0).float().repeat(3, 1, 1)
                 re_img_0 = re_img[0]
-                render_into_ori = re_img_0 * re_sil_0 + imgs[0] * (1 - re_sil_0)
+                mask_0 = (re_img_0 == 1).float()
+                render_into_ori = re_img_0 * mask_0 + imgs[0] * (1 - mask_0)
                 ax.imshow(render_into_ori.permute(1,2,0).cpu().detach().numpy())
-                ax.set_title("Rendered into original", fontsize=ax_font_size)
+            ax.set_title("Rendered into original", fontsize=ax_font_size)
             ax.axis('off')
         elif fig_name == 'render_img':
             # 51 Rendered RGB image
             if re_img is not None:
                 # ax9.imshow(re_img[0].flip(dims=(0,1)).cpu().detach().numpy())
                 ax.imshow(re_img[0].permute(1,2,0).cpu().detach().numpy())
-                ax.set_title("Rendered Img", fontsize=ax_font_size)
+            ax.set_title("Rendered Img", fontsize=ax_font_size)
             ax.axis('off')
 
 

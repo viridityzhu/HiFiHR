@@ -299,13 +299,13 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
         crit = nn.L1Loss()
 
         # texture loss: rendered img -> masked original img
-        texture_loss = crit(re_img, maskRGBs).cpu()
+        texture_loss = crit(re_img, maskRGBs)
         # texture_loss = torch.sum(torch.abs(re_img-maskRGBs))
         texture_loss = args.lambda_texture * texture_loss
         loss_dic['texture'] = texture_loss
 
         # mean rgb loss
-        loss_mean_rgb = torch_f.mse_loss(torch.mean(maskRGBs),torch.mean(re_img)).cpu()
+        loss_mean_rgb = torch_f.mse_loss(torch.mean(maskRGBs),torch.mean(re_img))
         # loss_mean_rgb = (torch.sum(torch.abs(torch.mean(re_img.view(re_img.shape[0],-1),1)-torch.mean(maskRGBs.view(maskRGBs.shape[0],-1),1)).mul(examples['texture_con']**2))/torch.sum((examples['texture_con']**2)))
         loss_mean_rgb = args.lambda_mrgb * loss_mean_rgb
         loss_dic['mrgb'] = loss_mean_rgb
@@ -331,7 +331,7 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
     # (fully supervision) silhouette loss: rendered sil -> gt sil
     if 're_sil' in outputs and 'segms_gt' in examples:
         crit = nn.L1Loss()
-        sil_loss = crit(outputs['re_sil'], examples['segms_gt'].float())
+        sil_loss = crit(outputs['re_sil'].squeeze(), examples['segms_gt'].float())
         loss_dic['sil'] = args.lambda_silhouette * sil_loss
 
     # perceptual loss: rendered img -> gt img. not used at all.
