@@ -187,6 +187,7 @@ class Model(nn.Module):
 
             outputs['re_img'] = rendered_images[..., :3] # the last dim is alpha
             outputs['re_sil'] = rendered_images[..., 3:4] # the last dim is alpha
+            outputs['re_sil'][outputs['re_sil'] > 0] = 255  # Binarize segmentation mask
             outputs['maskRGBs'] = images.mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
         
         # add mano faces to outputs (used in losses)

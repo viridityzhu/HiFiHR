@@ -1,5 +1,5 @@
 # 3D hand reconstruction from a single image
-[![wakatime](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/ef5d8f38-163d-408b-8d57-ee7291b33fbf.svg)](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/ef5d8f38-163d-408b-8d57-ee7291b33fbf)
+[![wakatime](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/ef5d8f38-163d-408b-8d57-ee7291b33fbf.svg)](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/ef5d8f38-163d-408b-8d57-ee7291b33fbf) + [![wakatime](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/f1f9ff8a-fda0-4d02-9cfd-107068c34223.svg)](https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/f1f9ff8a-fda0-4d02-9cfd-107068c34223)
 
 This code is based on [S<sup>2</sup>HAND](https://github.com/TerenceCYJ/S2HAND).
 

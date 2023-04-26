@@ -291,32 +291,22 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
             scale_loss = args.lambda_scale * scale_loss
             loss_dic['scale'] = scale_loss
 
-    # mesh texture regularization terms
-    if 'mtex' in loss_used and ('textures' in outputs) and ('texture_con' in examples):
-        textures = outputs['textures']
-        std = torch.std(textures.view(textures.shape[0],-1,3),dim=1)#[b,3]
-        mean = torch.mean(textures.view(textures.shape[0],-1,3),dim=1)
-        textures_reg = (torch.where(textures>(mean.view(-1,1,1,1,1,3)+2*std.view(-1,1,1,1,1,3)),textures-mean.view(-1,1,1,1,1,3),torch.zeros_like(textures))+torch.where(textures<(mean.view(-1,1,1,1,1,3)-2*std.view(-1,1,1,1,1,3)),-textures+mean.view(-1,1,1,1,1,3),torch.zeros_like(textures))).squeeze()
-        textures_reg = torch.sum(torch.mean(torch.mean(torch.mean(textures_reg,1),1),1).mul(examples['texture_con']*2))/torch.sum(examples['texture_con']**2)
-        textures_reg = args.lambda_tex_reg * textures_reg
-        loss_dic['mtex'] = textures_reg
 
     # photometric loss
-    if 're_img' in outputs and ('re_sil' in outputs) and ('texture_con' in examples):
+    if 're_img' in outputs and ('re_sil' in outputs):
         maskRGBs = outputs['maskRGBs']#examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
         re_img = outputs['re_img']
         crit = nn.L1Loss()
 
         # texture loss: rendered img -> masked original img
-        #texture_loss = crit(re_img, maskRGBs).cpu()
-        texture_con_this = examples['texture_con'].view(-1,1,1,1).repeat(1,re_img.shape[1],re_img.shape[2],re_img.shape[3])
-        texture_loss = (torch.sum(torch.abs(re_img-maskRGBs).mul(texture_con_this**2))/torch.sum((texture_con_this**2)))
+        texture_loss = crit(re_img, maskRGBs).cpu()
+        # texture_loss = torch.sum(torch.abs(re_img-maskRGBs))
         texture_loss = args.lambda_texture * texture_loss
         loss_dic['texture'] = texture_loss
 
         # mean rgb loss
-        #loss_mean_rgb = torch_f.mse_loss(torch.mean(maskRGBs),torch.mean(re_img)).cpu()
-        loss_mean_rgb = (torch.sum(torch.abs(torch.mean(re_img.view(re_img.shape[0],-1),1)-torch.mean(maskRGBs.view(maskRGBs.shape[0],-1),1)).mul(examples['texture_con']**2))/torch.sum((examples['texture_con']**2)))
+        loss_mean_rgb = torch_f.mse_loss(torch.mean(maskRGBs),torch.mean(re_img)).cpu()
+        # loss_mean_rgb = (torch.sum(torch.abs(torch.mean(re_img.view(re_img.shape[0],-1),1)-torch.mean(maskRGBs.view(maskRGBs.shape[0],-1),1)).mul(examples['texture_con']**2))/torch.sum((examples['texture_con']**2)))
         loss_mean_rgb = args.lambda_mrgb * loss_mean_rgb
         loss_dic['mrgb'] = loss_mean_rgb
 
@@ -327,16 +317,16 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
         loss_dic['ssim_tex'] = loss_ssim_tex
 
         # ssim texture depth loss: ssim between rendered img -- rendered depth. ??? is it reasonable?
-        ssim_tex_depth = pytorch_ssim.ssim(re_img, outputs['re_depth'].unsqueeze(1).repeat(1,3,1,1))
-        loss_ssim_tex_depth = 1 - ssim_tex_depth
-        loss_ssim_tex_depth = args.lambda_ssim_tex * loss_ssim_tex_depth
-        loss_dic['ssim_tex_depth'] = loss_ssim_tex_depth
+        # ssim_tex_depth = pytorch_ssim.ssim(re_img, outputs['re_depth'].unsqueeze(1).repeat(1,3,1,1))
+        # loss_ssim_tex_depth = 1 - ssim_tex_depth
+        # loss_ssim_tex_depth = args.lambda_ssim_tex * loss_ssim_tex_depth
+        # loss_dic['ssim_tex_depth'] = loss_ssim_tex_depth
         
         # ssim depth loss: ssim between masked original img -- rendered depth. ???
-        ssim_inrgb_depth = pytorch_ssim.ssim(maskRGBs, outputs['re_depth'].unsqueeze(1).repeat(1,3,1,1))
-        loss_ssim_inrgb_depth = 1 - ssim_inrgb_depth
-        loss_ssim_inrgb_depth = args.lambda_ssim_tex * loss_ssim_inrgb_depth
-        loss_dic['ssim_inrgb_depth'] = loss_ssim_inrgb_depth
+        # ssim_inrgb_depth = pytorch_ssim.ssim(maskRGBs, outputs['re_depth'].unsqueeze(1).repeat(1,3,1,1))
+        # loss_ssim_inrgb_depth = 1 - ssim_inrgb_depth
+        # loss_ssim_inrgb_depth = args.lambda_ssim_tex * loss_ssim_inrgb_depth
+        # loss_dic['ssim_inrgb_depth'] = loss_ssim_inrgb_depth
     
     # (fully supervision) silhouette loss: rendered sil -> gt sil
     if 're_sil' in outputs and 'segms_gt' in examples:
@@ -379,5 +369,12 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
         # pose_loss = outputs['pose_params'].pow(2).sum(dim=-1).sqrt().mean()*10  
         pose_loss = args.lambda_pose * pose_loss
         loss_dic['mpose'] = pose_loss
+
+    # mesh texture regularization terms
+    if 'mtex' in loss_used and ('texture_params' in outputs):
+        assert 'texture_params' in outputs, "Using mtex as loss but texture_params not outputted."
+        texture_loss = torch_f.mse_loss(outputs['texture_params'], torch.zeros_like(outputs['texture_params']).to(device))
+        textures_reg = args.lambda_tex_reg * texture_loss
+        loss_dic['mtex'] = textures_reg
     
     return loss_dic
