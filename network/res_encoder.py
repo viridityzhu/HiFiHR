@@ -45,9 +45,9 @@ class ResEncoder(nn.Module):
         #################### Backbone
         #with torch.no_grad():
         # low_features, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
-        _, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+        low, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
         features = self.mmpool(features).view(features.shape[0], -1) # [b, 1024, 7, 7] -> [b, 1024, 1, 1] -> [b, 1024]
-        return _, features 
+        return low, features 
 
 
 class HandEncoder(nn.Module):
@@ -167,32 +167,38 @@ class HandEncoder(nn.Module):
         }
 
 class LightEstimator(nn.Module):
-    def __init__(self, num_channel=32, dim_in=56,mode='surf'):
+    def __init__(self):
         super(LightEstimator, self).__init__()
         self.base_layers = nn.Sequential(
-            nn.Conv2d(32, 48, kernel_size=10, stride=4, padding=1),#[48,13,13]
+            # input: b, 512, 28, 28
+            nn.Conv2d(512, 48, kernel_size=1, stride=2),#[48,14,14]
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2),#[48,6,6]
-            nn.Conv2d(48, 64, kernel_size=3),#[64,4,4]
+            nn.Conv2d(48, 48, kernel_size=3, stride=1),#[48,12,12]
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),#[48,12,12]
+            nn.Conv2d(48, 64, kernel_size=3, stride=2),#[64,5,5]
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),#[64,2,2]
         )
         self.light_reg = nn.Sequential(
             nn.Linear(256, 64),
             nn.ReLU(inplace=True),
-            nn.Linear(64, 11),
+            nn.Linear(64, 6),
             #nn.Sigmoid()
         )
-        self.mode = mode
         self.light_reg.apply(weights_init)
+        self.hardtanh = nn.Hardtanh(min_val=0.0, max_val=1.0)
 
 
     def forward(self, low_features):
-        base_features = self.base_layers(low_features)#[b,64,2,2]
+        base_features = self.base_layers(low_features)# [b, 64, 2, 2]
         base_features = base_features.view(base_features.shape[0],-1)##[B,256]
         # lighting
         lights = self.light_reg(base_features)#[b,11]
-        return lights
+        colors = self.hardtanh(lights[:, :3])
+        directions = lights[:, 3:]
+        outputs = {'colors': colors, 'directions': directions}
+        return outputs
 
 
 def normalize_batch_3C(batch):
@@ -348,15 +354,15 @@ class Resnet_4C(nn.Module):
         model.layer4[0].conv2.stride = (1,1)
         self.model = model
     def forward(self, x):
-        x = self.model.conv1(x)
-        x = self.model.bn1(x)
-        x = self.model.relu(x)
-        x = self.model.maxpool(x)
-        x = self.model.layer1(x)
-        x = self.model.layer2(x)
-        x = self.model.layer3(x)
+        x = self.model.conv1(x) # b, 3, 224, 224 -> b, 64, 112, 112
+        x = self.model.bn1(x) # b, 64, 112, 112
+        x = self.model.relu(x) 
+        x = self.model.maxpool(x) # b, 64, 56, 56
+        x = self.model.layer1(x) # b, 256, 56, 56
+        x_low = self.model.layer2(x) # b, 512, 28, 28
+        x = self.model.layer3(x_low) # b, 1024, 14, 14
         x = self.model.layer4(x) # b, 2048, 14, 14
-        return None, x 
+        return x_low, x 
 
 class HRnet_4C(nn.Module):
     def __init__(self, pretrain, if_4c=False):

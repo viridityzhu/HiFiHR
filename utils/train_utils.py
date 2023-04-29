@@ -84,7 +84,10 @@ def load_model(model,optimizer,scheduler, args):
         print('loading the model from:', args.pretrain_model)
         logging.info('pretrain_model: %s' %args.pretrain_model)
         current_epoch = state_dict['epoch']
-        optimizer.load_state_dict(state_dict['optimizer'])
+        try:
+            optimizer.load_state_dict(state_dict['optimizer'])
+        except:
+            print('optimizer not loaded')
         scheduler.load_state_dict(state_dict['scheduler'])
 
         if hasattr(model,'texture_light_from_low') and args.pretrain_texture_model is not None:

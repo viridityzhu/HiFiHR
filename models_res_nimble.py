@@ -17,6 +17,7 @@ from pytorch3d.renderer import (
     HardPhongShader,
     Materials
 )
+from pytorch3d.renderer.lighting import DirectionalLights
 import pytorch3d.renderer as p3d_renderer
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
@@ -85,6 +86,8 @@ class Model(nn.Module):
                 ),
             )
 
+            self.light_estimator = LightEstimator()
+
 
     def forward(self, images, Ks=None, scale_gt=None, root_xyz=None):
         if self.hand_model == 'mano_new':
@@ -99,7 +102,10 @@ class Model(nn.Module):
         batch_size = images.shape[0]
         # Use base_encoder to extract features
         # low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
-        _, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
+        low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
+
+        # Use light_estimator to get light parameters
+        light_params = self.light_estimator(low_features)
         
         # Use hand_encoder to get hand parameters
         hand_params  = self.hand_encoder(features)
@@ -161,13 +167,16 @@ class Model(nn.Module):
                                                               principal_point=prp,
                                                               device=device) # R and t are identity and zeros by default
             # TODO: add lighting estimator
-            lighting = p3d_renderer.lighting.PointLights(
-                # ambient_color=((1.0, 1.0, 1.0),),
-                # diffuse_color=((0.0, 0.0, 0.0),),
-                # specular_color=((0.0, 0.0, 0.0),),
-                # location=((0.0, 0.0, 0.0),),
-                device=device,
-            )
+            # lighting = p3d_renderer.lighting.PointLights(
+            #     # ambient_color=((1.0, 1.0, 1.0),),
+            #     # diffuse_color=((0.0, 0.0, 0.0),),
+            #     # specular_color=((0.0, 0.0, 0.0),),
+            #     # location=((0.0, 0.0, 0.0),),
+            #     device=device,
+            # )
+            lighting = DirectionalLights(diffuse_color=light_params['colors'], # N, 3
+                                         direction=light_params['directions'], # N, 3 
+                                         device=device)
 
             # move to the root relative coord. 
             # verts = verts - pred_root_xyz + root_xyz
