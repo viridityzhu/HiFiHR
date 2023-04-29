@@ -294,7 +294,8 @@ def loss_func_new(examples, outputs, loss_used, dat_name, args) -> dict:
 
     # photometric loss
     if 're_img' in outputs and ('re_sil' in outputs):
-        maskRGBs = outputs['maskRGBs']#examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
+        # maskRGBs = outputs['maskRGBs']#examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
+        maskRGBs = examples['segms_gt'].unsqueeze(1) * examples['imgs'] #examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
         # re_img needs to be masked by re_sil!!!
         re_img = outputs['re_img'] * (outputs['re_sil']/255.0).repeat(1,3,1,1)
         crit = nn.L1Loss()
