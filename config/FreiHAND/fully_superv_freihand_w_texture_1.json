@@ -2,12 +2,12 @@
     "train_datasets":["FreiHand"],
     "val_datasets":["FreiHand"],
     "freihand_base_path": "../freihand",
-    "base_out_path": "outputs/freihand/texture",
+    "base_out_path": "outputs/freihand/texture_1",
     "is_write_tb": true,
     "writer_topic": "runs/freihand/texture/", 
     "total_epochs": 500,
     "init_lr": 0.001,
-    "force_init_lr": 0.0001,
+    "force_init_lr": 0.001,
     "lr_steps": [50, 80, 110, 160, 200, 300, 350, 400, 450],
     "lr_gamma": 0.5,
     "save_interval": 10,
@@ -24,7 +24,7 @@
 
     "new_model": true,
     "render": true,
-    "light_estimation": false,
+    "light_estimation": true,
     "four_channel": false,
     "hand_model": "nimble",
     "base_loss_fn": "L1",
@@ -42,7 +42,7 @@
     "lambda_shape_list": [0.1, 0.001, 0.00001],
 
     "pretrain": "res101",
-    "pretrain_model": "outputs/freihand/texture/model/texturehand_latest.t7",
+    "pretrain_model": "outputs/freihand/shape_no_render/model/texturehand_latest.t7",
 
 
     "train_queries": ["trans_images","trans_Ks","trans_joints", "scales", "trans_verts", "trans_masks"],
