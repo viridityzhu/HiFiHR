@@ -29,7 +29,7 @@ ytbHand_trainer = dense_pose_Trainer(None, None)
 
 
 class Model(nn.Module):
-    def __init__(self, ifRender, device, if_4c, hand_model, use_mean_shape, pretrain, root_id=9, root_id_nimble=11):
+    def __init__(self, ifRender, device, if_4c, hand_model, use_mean_shape, pretrain, root_id=9, root_id_nimble=11, ifLight=True):
         super(Model, self).__init__()
         self.hand_model = hand_model
         self.root_id = root_id
@@ -58,6 +58,7 @@ class Model(nn.Module):
         self.mano_face = Variable(torch.from_numpy(np.expand_dims(dd['f'],0).astype(np.int16)).to(device=device))
 
         self.ifRender = ifRender
+        self.ifLight = ifLight
         self.aa_factor = 3
         # Renderer
         if self.ifRender:
@@ -86,6 +87,7 @@ class Model(nn.Module):
                 ),
             )
 
+        if self.ifLight:
             self.light_estimator = LightEstimator()
 
 
@@ -105,7 +107,8 @@ class Model(nn.Module):
         low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
 
         # Use light_estimator to get light parameters
-        light_params = self.light_estimator(low_features)
+        if self.ifLight:
+            light_params = self.light_estimator(low_features)
         
         # Use hand_encoder to get hand parameters
         hand_params  = self.hand_encoder(features)
@@ -166,17 +169,19 @@ class Model(nn.Module):
             cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, 
                                                               principal_point=prp,
                                                               device=device) # R and t are identity and zeros by default
-            # TODO: add lighting estimator
-            # lighting = p3d_renderer.lighting.PointLights(
-            #     # ambient_color=((1.0, 1.0, 1.0),),
-            #     # diffuse_color=((0.0, 0.0, 0.0),),
-            #     # specular_color=((0.0, 0.0, 0.0),),
-            #     # location=((0.0, 0.0, 0.0),),
-            #     device=device,
-            # )
-            lighting = DirectionalLights(diffuse_color=light_params['colors'], # N, 3
-                                         direction=light_params['directions'], # N, 3 
-                                         device=device)
+            if self.ifLight:
+                lighting = DirectionalLights(diffuse_color=light_params['colors'], # N, 3
+                                            direction=light_params['directions'], # N, 3 
+                                            device=device)
+            else:
+                lighting = p3d_renderer.lighting.PointLights(
+                    # ambient_color=((1.0, 1.0, 1.0),),
+                    # diffuse_color=((0.0, 0.0, 0.0),),
+                    # specular_color=((0.0, 0.0, 0.0),),
+                    # location=((0.0, 0.0, 0.0),),
+                    device=device,
+                )
+                
 
             # move to the root relative coord. 
             # verts = verts - pred_root_xyz + root_xyz

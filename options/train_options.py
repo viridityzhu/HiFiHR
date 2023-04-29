@@ -31,6 +31,7 @@ def get_parser():
     parser.add_argument('--camera_mode', type=str, default='projection')
     parser.add_argument('--perspective', type=bool, default=False)
     parser.add_argument('--render', type=bool, default=True, help='whether to render the 3D back to 2D.')
+    parser.add_argument('--light_estimation', type=bool, default=False, help="whether to estimate lighting.")
     
 
     # For outputs
