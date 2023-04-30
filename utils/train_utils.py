@@ -65,7 +65,7 @@ def load_model(model,optimizer,scheduler, args):
         
         if 'texture_light_from_low' in state_dict.keys() and hasattr(model,'texture_light_from_low'):
             model.texture_light_from_low.load_state_dict(state_dict['texture_light_from_low'])
-        if 'light_estimator' in state_dict.keys() and hasattr(model.module,'light_estimator'):
+        if 'light_estimator' in state_dict.keys() and hasattr(model,'light_estimator'):
             model.light_estimator.load_state_dict(state_dict['light_estimator'])
         if 'textures' in args.train_requires and 'texture_estimator' in state_dict.keys():
             if hasattr(model,'renderer'):
