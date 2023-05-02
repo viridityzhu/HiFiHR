@@ -14,7 +14,7 @@ import torch.nn.functional as torch_f
 from torch.utils.tensorboard import SummaryWriter
 
 from options import train_options
-from losses import loss_func_new
+from losses import LossFunction
 from data.dataset import get_dataset
 
 from utils.train_utils import *
@@ -74,7 +74,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         loss_used = args.losses
             
         # Compute loss function
-        loss_dic = loss_func_new(examples, outputs, loss_used, dat_name, args)
+        loss_dic = loss_func(examples, outputs, loss_used, dat_name, args)
         loss = torch.zeros(1).float().to(args.device)
         for loss_key in loss_used:
             # if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
@@ -426,6 +426,7 @@ if __name__ == '__main__':
 
     model = nn.DataParallel(model.cuda())
 
+    loss_func = LossFunction()
 
     # Optionally freeze parts of the network
     freeze_model_modules(model, args)
