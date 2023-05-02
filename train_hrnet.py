@@ -100,6 +100,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
             for i in xyz_preds:
                 xyz_pred_list.append(i.squeeze())
+            vert_preds = outputs['mano_verts'].cpu().detach().numpy()
+            vert_preds = np.split(vert_preds, vert_preds.shape[0])
+            for i in vert_preds:
+                verts_pred_list.append(i.squeeze())
             # j3d_ED_list, j2d_ED_list = save_3d(examples, outputs) # Euclidean distances between each joint-pair
             # log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging)
             # del j3d_ED_list, j2d_ED_list 
@@ -162,30 +166,40 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
                 # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
-                # ---- evaluation: MPJPE after alignment --------
+                # ---- evaluation: MPJPE and MPVPE after alignment --------
                 # load eval annotations
                 gt_path = args.freihand_base_path
                 xyz_list, verts_list = json_load(os.path.join(gt_path, 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'evaluation_verts.json'))
                 pose_align_all = []
+                vert_align_all = []
                 pose_3d = np.array(xyz_pred_list)
+                vert_3d = (np.concatenate(verts_pred_list, axis=0))
                 pose_3d_gt = np.array(xyz_list)
+                vert_3d_gt = (np.concatenate(verts_list, axis=0))
 
                 for idx in range(pose_3d.shape[0]):
                     #align prediction
                     pose_pred_aligned=align_w_scale(pose_3d_gt[idx], pose_3d[idx])
+                    vert_pred_aligned=align_w_scale(vert_3d_gt[idx], vert_3d[idx])
                     pose_align_all.append(pose_pred_aligned)
+                    vert_align_all.append(vert_pred_aligned)
                 pose_align_all = torch.from_numpy(np.array(pose_align_all)).cuda()
+                vert_align_all = torch.from_numpy(np.array(vert_align_all)).cuda()
                 pose_3d_gt = torch.from_numpy(pose_3d_gt).cuda()
+                vert_3d_gt = torch.from_numpy(vert_3d_gt).cuda()
 
                 pose_3d_loss = torch.linalg.norm((pose_align_all - pose_3d_gt), ord=2,dim=-1)
+                vert_3d_loss = torch.linalg.norm((vert_align_all - vert_3d_gt), ord=2,dim=-1)
                 pose_3d_loss = (np.concatenate(pose_3d_loss.detach().cpu().numpy(),axis=0)).mean()
+                vert_3d_loss = (np.concatenate(vert_3d_loss.detach().cpu().numpy(),axis=0)).mean()
 
-                console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.6f} cm")
+                console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.6f} cm, vert 3d: {vert_3d_loss * 100.0:.6f} cm")
                 test_log[epoch] = pose_3d_loss.item()
                 console.log(f'[bold green]Best results: {min(test_log.values()) * 100.0:.6f} cm, epoch {min(test_log, key=test_log.get):d}\n')
                 if writer is not None:
                     with torch.no_grad():
                         writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)
+                        writer.add_scalar('eval/vert_3d_loss', vert_3d_loss.item(), epoch)
 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
