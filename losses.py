@@ -394,3 +394,7 @@ class LossFunction():
             loss_dic['mtex'] = textures_reg
         
         return loss_dic
+
+    def MSE_loss(self, pred, label=0) -> torch.Tensor:
+        loss = (pred.contiguous() - label) ** 2
+        return loss.mean()

@@ -10,6 +10,8 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as torch_f
+import lpips
+import utils.pytorch_ssim as pytorch_ssim
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -43,6 +45,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
     xyz_pred_list, verts_pred_list = list(), list()
     # op_xyz_pred_list, op_verts_pred_list = list(), list()
     j2d_pred_ED_list,  j2d_proj_ED_list, j2d_detect_ED_list = list(), list(), list() 
+    texture_metric_list = list()
 
     
     for idx, (sample) in enumerate(train_loader):
@@ -115,6 +118,15 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             j2d_proj_ED_list.append(j2d_proj_ED)
             j2d_detect_ED_list.append(j2d_detect_ED)
 
+        # compute texture metric
+        if not mode_train:
+            maskRGBs = examples['segms_gt'].unsqueeze(1) * examples['imgs'] #examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
+            mask_re_img = outputs['re_img'] * examples['segms_gt'].unsqueeze(1) # (outputs['re_sil']/255.0).repeat(1,3,1,1)
+            psnr = -10 * loss_func.MSE_loss(mask_re_img, maskRGBs).log10().item()
+            ssim = pytorch_ssim.ssim(mask_re_img, maskRGBs).item()
+            lpips = lpips_loss(mask_re_img * 2 - 1, maskRGBs * 2 - 1).mean().item()
+            texture_metric_list.append({'psnr':psnr, 'ssim':ssim, 'lpips':lpips})
+
 
         # Save visualization and print information
         batch_time.update(time.time() - end)
@@ -163,9 +175,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             if epoch%args.save_interval==0 and epoch>0:
                 os.makedirs(pred_out_path, exist_ok=True)
                 pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
-                dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
+                # dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
                 # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
+
                 # ---- evaluation: MPJPE and MPVPE after alignment --------
                 # load eval annotations
                 gt_path = args.freihand_base_path
@@ -173,9 +186,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 pose_align_all = []
                 vert_align_all = []
                 pose_3d = np.array(xyz_pred_list)
-                vert_3d = (np.concatenate(verts_pred_list, axis=0))
+                vert_3d = np.array(verts_pred_list)
                 pose_3d_gt = np.array(xyz_list)
-                vert_3d_gt = (np.concatenate(verts_list, axis=0))
+                vert_3d_gt = np.array(verts_list)
 
                 for idx in range(pose_3d.shape[0]):
                     #align prediction
@@ -194,12 +207,28 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 vert_3d_loss = (np.concatenate(vert_3d_loss.detach().cpu().numpy(),axis=0)).mean()
 
                 console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.6f} cm, vert 3d: {vert_3d_loss * 100.0:.6f} cm")
-                test_log[epoch] = pose_3d_loss.item()
-                console.log(f'[bold green]Best results: {min(test_log.values()) * 100.0:.6f} cm, epoch {min(test_log, key=test_log.get):d}\n')
+                test_log[epoch] = [pose_3d_loss.item(), vert_3d_loss.item()]
+
+                best_MPJPE = min(test_log.values(), key=lambda x: x[0])[0]
+                best_results = [k for k, v in test_log.items() if v[0] == best_MPJPE]
+                best_epoch = best_results[0]
+                best_MPJPE, best_MPVPE = test_log[best_epoch]
+                console.log(f'[bold green]Best MPJPE: {best_MPJPE * 100:.6f} cm, MPVPE: {best_MPVPE * 100:.6f}, Epoch: {best_epoch}\n')
+
+                # ----- evaluation: texture metrics --------        
+                psnr = np.mean([r['psnr'] for r in texture_metric_list])
+                ssim = np.mean([r['ssim'] for r in texture_metric_list])
+                lpips = np.mean([r['lpips'] for r in texture_metric_list])
+                console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}\n')
+
+
                 if writer is not None:
                     with torch.no_grad():
                         writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)
                         writer.add_scalar('eval/vert_3d_loss', vert_3d_loss.item(), epoch)
+                        writer.add_scalar('eval/psnr', psnr, epoch)
+                        writer.add_scalar('eval/ssim', ssim, epoch)
+                        writer.add_scalar('eval/lpips', lpips, epoch)
 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
@@ -441,6 +470,7 @@ if __name__ == '__main__':
     model = nn.DataParallel(model.cuda())
 
     loss_func = LossFunction()
+    lpips_loss = lpips.LPIPS(net="alex").to(args.device)
 
     # Optionally freeze parts of the network
     freeze_model_modules(model, args)
