@@ -187,7 +187,8 @@ class LightEstimator(nn.Module):
             #nn.Sigmoid()
         )
         self.light_reg.apply(weights_init)
-        self.hardtanh = nn.Hardtanh(min_val=0.0, max_val=1.0)
+        # self.hardtanh = nn.Hardtanh(min_val=0.0, max_val=1.0)
+        self.hardtanh = nn.Hardtanh()
 
 
     def forward(self, low_features):
@@ -197,6 +198,9 @@ class LightEstimator(nn.Module):
         lights = self.light_reg(base_features)#[b,11]
         colors = self.hardtanh(lights[:, :3])
         directions = lights[:, 3:]
+        if torch.any(colors.isnan()):
+            print(f'nan color!!! colors: {colors}, lights: {lights[:, :3]}')
+            import pdb; pdb.set_trace()
         outputs = {'colors': colors, 'directions': directions}
         return outputs
 
