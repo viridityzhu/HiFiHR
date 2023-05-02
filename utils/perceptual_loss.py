@@ -25,7 +25,7 @@ class PerceptualLoss(nn.Module):
 
     @staticmethod
     def contentFunc(final_layer=14):
-        cnn = torchvision.models.vgg19(pretrained=True).features
+        cnn = torchvision.models.vgg19(weights=torchvision.models.VGG19_Weights.DEFAULT).features
         cnn = cnn.cuda()
         model = nn.Sequential()
         model = model.cuda()
