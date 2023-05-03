@@ -94,6 +94,13 @@ def load_model(model,optimizer,scheduler, args):
             texture_state_dict = torch.load(args.pretrain_texture_model)
             model.texture_light_from_low.load_state_dict(texture_state_dict['texture_light_from_low'])
             print('loading the texture module from:', args.pretrain_texture_model)
+        if hasattr(model,'light_estimator') and args.pretrain_texture_model is not None:
+            texture_state_dict = torch.load(args.pretrain_texture_model)
+            model.light_estimator.load_state_dict(texture_state_dict['light_estimator'])
+
+            tex_reg_state_dict = {k.replace('tex_reg.', ''): v for k, v in texture_state_dict['hand_encoder'].items() if 'tex_reg' in k}
+            model.hand_encoder.tex_reg.load_state_dict(tex_reg_state_dict)
+            print('loading the texture module from:', args.pretrain_texture_model)
     # load the pre-trained heat-map estimation model
     if hasattr(model,'rgb2hm') and args.pretrain_rgb2hm is not None:
         #util.load_net_model(args.pretrain_rgb2hm, model.rgb2hm.net_hm)
