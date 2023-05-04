@@ -24,7 +24,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             if nimble_j2d is not None: # means it's nimble hand
                 skin_v_smooth = skin_meshes.verts_padded()[0].detach().cpu().numpy()
                 # save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy(), console=console)
-                save_textured_nimble(demo_path, skin_v_smooth, console=console)
+                save_textured_nimble(demo_path, skin_v_smooth, tex_img=textures[0].detach().cpu().numpy(), console=console)
             else:
                 IO().save_mesh(skin_meshes[0], demo_path)
 
@@ -684,8 +684,8 @@ def displadic(mode_train, obj_output, image_output, epoch, idx, examples, output
 
 def multiview_render(image_output, outputs, epoch, idx):
     #import pdb; pdb.set_trace()
-    batch_size = outputs['vertices'].shape[0]
-    device = outputs['vertices'].device
+    batch_size = outputs['verts'].shape[0]
+    device = outputs['verts'].device
     from utils.hand_3d_model import rodrigues
     from torchvision.utils import save_image
     file_path = os.path.join(image_output, "multiviews")
@@ -694,7 +694,8 @@ def multiview_render(image_output, outputs, epoch, idx):
     for i in range(20):
         rots = torch.tensor([0,np.pi*2/20*i,0]).unsqueeze(0).repeat(batch_size,1).to(device)
         Rots = rodrigues(rots)[0]
-        new_vertices = torch.matmul(Rots,(outputs['vertices']-torch.mul(outputs['joints'][:,9],torch.tensor([0,0,1]).float().to(device)).unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
+        # new_vertices = torch.matmul(Rots,(outputs['verts']-torch.mul(outputs['joints'][:,9],torch.tensor([0,0,1]).float().to(device)).unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
+        new_vertices = torch.matmul(Rots,outputs['verts'].permute(0,2,1)).permute(0,2,1)
         #new_vertices = torch.matmul(Rots,(outputs['vertices']-outputs['joints'][:,9].unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
         #new_vertices = torch.matmul(Rots,(outputs['vertices']-outputs['trans'].unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
         op_re_img,op_re_depth,op_re_sil = outputs['render'](new_vertices, outputs['faces'], torch.tanh(outputs['face_textures']), mode=None)
@@ -703,7 +704,7 @@ def multiview_render(image_output, outputs, epoch, idx):
         save_image(op_re_img[0], file_str)
         rots = torch.tensor([np.pi*2/20*i,0,0]).unsqueeze(0).repeat(batch_size,1).to(device)
         Rots = rodrigues(rots)[0]
-        new_vertices = torch.matmul(Rots,(outputs['vertices']-torch.mul(outputs['joints'][:,9],torch.tensor([0,0,1]).float().to(device)).unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
+        new_vertices = torch.matmul(Rots,(outputs['verts']-torch.mul(outputs['joints'][:,9],torch.tensor([0,0,1]).float().to(device)).unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
         op_re_img,op_re_depth,op_re_sil = outputs['render'](new_vertices, outputs['faces'], torch.tanh(outputs['face_textures']), mode=None)
         file_str = os.path.join(file_path, '{:04d}_{:07d}_v_{}.png'.format(epoch, idx,i))
         save_image(op_re_img[0], file_str)
