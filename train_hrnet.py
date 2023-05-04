@@ -125,7 +125,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             psnr = -10 * loss_func.MSE_loss(mask_re_img, maskRGBs).log10().item()
             ssim = pytorch_ssim.ssim(mask_re_img, maskRGBs).item()
             lpips = lpips_loss(mask_re_img * 2 - 1, maskRGBs * 2 - 1).mean().item()
-            texture_metric_list.append({'psnr':psnr, 'ssim':ssim, 'lpips':lpips})
+            l1 = loss_func.L1_loss(mask_re_img, maskRGBs).mean().item()
+            l2 = loss_func.MSE_loss(mask_re_img, maskRGBs).mean().item()
+            texture_metric_list.append({'psnr':psnr, 'ssim':ssim, 'lpips':lpips, 'l1': l1, 'l2': l2})
 
 
         # Save visualization and print information
@@ -219,7 +221,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 psnr = np.mean([r['psnr'] for r in texture_metric_list])
                 ssim = np.mean([r['ssim'] for r in texture_metric_list])
                 lpips = np.mean([r['lpips'] for r in texture_metric_list])
-                console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}\n')
+                l1 = np.mean([r['l1'] for r in texture_metric_list])
+                l2 = np.mean([r['l2'] for r in texture_metric_list])
+                console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
 
 
                 if writer is not None:
@@ -229,6 +233,8 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                         writer.add_scalar('eval/psnr', psnr, epoch)
                         writer.add_scalar('eval/ssim', ssim, epoch)
                         writer.add_scalar('eval/lpips', lpips, epoch)
+                        writer.add_scalar('eval/l1', l1, epoch)
+                        writer.add_scalar('eval/l2', l2, epoch)
 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)

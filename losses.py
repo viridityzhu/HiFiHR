@@ -398,3 +398,7 @@ class LossFunction():
     def MSE_loss(self, pred, label=0) -> torch.Tensor:
         loss = (pred.contiguous() - label) ** 2
         return loss.mean()
+
+    def L1_loss(self, pred, label=0) -> torch.Tensor:
+        loss = torch.abs(pred.contiguous() - label)
+        return loss.mean()
