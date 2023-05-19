@@ -849,7 +849,6 @@ class HandDataset(Dataset):
             '''
             joints2d_l = joints2d[:21,:]
             joints2d_r = joints2d[21:,:]
-            #import pdb;pdb.set_trace()
             
             joints2d_vis_l = joints2d_vis[:21]
             joints2d_vis_r = joints2d_vis[21:]
