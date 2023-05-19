@@ -55,7 +55,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         
         root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
-        outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scales'], root_xyz=root_xyz)
+        outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
 
         # ** positions are relative to middle root.

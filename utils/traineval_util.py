@@ -223,6 +223,7 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
         if 'keypoint_scale' in data_batch:
             keypoint_scale = data_batch['keypoint_scale'].cuda()#[B]
             example_torch['keypoint_scale'] = keypoint_scale
+            example_torch['scales'] = keypoint_scale
         if "uv_vis" in data_batch:
             uv_vis = data_batch['uv_vis']#[B,21] True False
             uv_vis = RHD2Frei(uv_vis)

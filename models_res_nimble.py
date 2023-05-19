@@ -99,7 +99,7 @@ class Model(nn.Module):
             self.light_estimator = LightEstimator(self.low_feat_dim)
 
 
-    def forward(self, images, Ks=None, scale_gt=None, root_xyz=None):
+    def forward(self, images, Ks=None, root_xyz=None):
         if self.hand_model == 'mano_new':
             pred = self.ytbHand(images)
             outputs = {
