@@ -290,7 +290,8 @@ class HandDataset(Dataset):
             
             #needs_center_scale=False
             mask_r = (mask>17)
-            mask_l = (mask>1) - mask_r
+            # mask_l = (mask>1) - mask_r
+            mask_l = (mask > 1) & (~mask_r)
             #one_map, zero_map = torch.ones_like(mask), torch.zeros_like(mask)
             num_px_left_hand = torch.sum(mask_l)
             num_px_right_hand = torch.sum(mask_r)
@@ -1269,9 +1270,9 @@ class RHD:
         with open(os.path.join(self.base_path, set, 'anno_%s.pickle' % set), 'rb') as fi:
             self.anno_all = pickle.load(fi)
         
-        self.open_2dj_lists = json_load(os.path.join(self.base_path, set, 'openpose', 'detect.json'))
-        self.open_2dj_list = self.open_2dj_lists[0]
-        self.open_2dj_con_list = self.open_2dj_lists[1]
+        # self.open_2dj_lists = json_load(os.path.join(self.base_path, set, 'openpose', 'detect.json'))
+        # self.open_2dj_list = self.open_2dj_lists[0]
+        # self.open_2dj_con_list = self.open_2dj_lists[1]
         img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, self.set_name, 'color')))]
         self.prefix_template = "{:05d}"
         prefixes = [self.prefix_template.format(idx) for idx in img_idxs]
