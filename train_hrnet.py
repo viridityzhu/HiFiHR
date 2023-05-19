@@ -119,7 +119,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             j2d_detect_ED_list.append(j2d_detect_ED)
 
         # compute texture metric
-        if not mode_train:
+        if not mode_train and args.render:
             maskRGBs = examples['segms_gt'].unsqueeze(1) * examples['imgs'] #examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
             mask_re_img = outputs['re_img'] * examples['segms_gt'].unsqueeze(1) # (outputs['re_sil']/255.0).repeat(1,3,1,1)
             psnr = -10 * loss_func.MSE_loss(mask_re_img, maskRGBs).log10().item()

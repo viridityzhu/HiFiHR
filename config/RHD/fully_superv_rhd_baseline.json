@@ -13,7 +13,7 @@
     "controlled_exp": false,
     "controlled_size": 1000,
     "train_batch":80,
-    "val_batch":16,
+    "val_batch":32,
     "num_workers":16,
     "if_test": true,
     "save_2d": false,
@@ -38,7 +38,8 @@
     "pretrain": "effb3",
 
     "train_queries": ["trans_images","trans_Ks","joints","scales","trans_joints2d"],
-    "val_queries": ["images","Ks","joints", "scales"],
+    "val_queries": ["trans_images","trans_Ks","joints", "scales",
+        "trans_joints2d"],
     "losses": ["joint_3d", "mpose"], 
     "train_requires": ["joints", "verts"],
     "test_requires": ["joints", "verts"],
