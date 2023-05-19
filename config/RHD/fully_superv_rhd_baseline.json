@@ -37,7 +37,7 @@
 
     "pretrain": "effb3",
 
-    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales"],
+    "train_queries": ["trans_images","trans_Ks","joints","scales"],
     "val_queries": ["images","Ks","joints", "scales"],
     "losses": ["joint_3d", "mpose"], 
     "train_requires": ["joints", "verts"],
