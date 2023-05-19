@@ -64,6 +64,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             ax.axis('off')
             if j2d_gt is not None:
                 uv = j2d_gt[0].detach().cpu().numpy()
+                # plot_hand(ax, uv, order='uv', dataset_name=dataset_name)
                 plot_hand(ax, uv, order='uv', dataset_name='FreiHand')
         elif fig_name == 'nimble_j2d':
 
