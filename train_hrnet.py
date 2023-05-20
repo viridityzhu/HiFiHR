@@ -162,7 +162,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
     # after one epoch....
     # dump results
-    if dat_name == 'FreiHand' or dat_name == 'HO3D' or dat_name == 'RHD':
+    if dat_name == 'FreiHand' or dat_name == 'HO3D':
         if mode_train:
             pred_out_path = os.path.join(args.pred_output,'train',str(epoch))
             if args.save_3d:
