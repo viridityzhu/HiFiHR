@@ -41,7 +41,7 @@
     "train_queries": ["trans_images","trans_Ks","joints","scales","trans_joints2d"],
     "val_queries": ["trans_images","trans_Ks","joints", "scales",
         "trans_joints2d"],
-    "losses": ["joint_3d", "mpose"], 
+    "losses": ["joint_3d", "mpose", "bone_direc_3d"], 
     "train_requires": ["joints", "verts"],
     "test_requires": ["joints", "verts"],
     "task": "train",

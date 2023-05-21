@@ -65,10 +65,12 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         # Projection transformation, project joints to 2D
         if 'joints' in outputs:
-            j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz)
+            # j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz)
+            j2d = trans_proj_j2d(outputs, examples['Ks'], root_xyz=root_xyz) # do not need scale
             outputs.update({'j2d': j2d})
             if args.hand_model == 'nimble':
-                nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
+                # nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
+                nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], root_xyz=root_xyz, which_joints='nimble_joints')
                 outputs.update({'nimble_j2d': nimble_j2d})
         
         # ===================================

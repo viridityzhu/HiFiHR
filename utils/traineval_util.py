@@ -306,6 +306,8 @@ def trans_proj_j2d(outputs, Ks_this, scales=None, is_ortho=False, root_xyz=None,
         scales = scales.unsqueeze(1).expand(j3d.shape[0], j3d.shape[1]).unsqueeze(2).repeat(1,1,3)
         j3d = j3d * scales
         j3d = j3d + root_xyz# recover the camera view coord
+    elif root_xyz is not None and scales is None: # no scale
+        j3d = j3d + root_xyz# recover the camera view coord
     if is_ortho:
         proj_joints = orthographic_proj_withz(j3d, outputs['trans'], outputs['scale'])
         j2d = proj_joints[:, :, :2]
