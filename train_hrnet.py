@@ -57,8 +57,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         
         root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
-        
-        outputs = model(examples['imgs'], Ks=examples['Ps'], scale_gt=examples['scales'], root_xyz=root_xyz)
+        outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
         # ** positions are relative to middle root.
         examples['joints'] = examples['joints'] - root_xyz
@@ -230,24 +229,27 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 best_MPJPE, best_MPVPE = test_log[best_epoch]
                 console.log(f'[bold green]Best MPJPE: {best_MPJPE * 100:.6f} cm, MPVPE: {best_MPVPE * 100:.6f}, Epoch: {best_epoch}\n')
 
-                # ----- evaluation: texture metrics --------        
-                psnr = np.mean([r['psnr'] for r in texture_metric_list])
-                ssim = np.mean([r['ssim'] for r in texture_metric_list])
-                lpips = np.mean([r['lpips'] for r in texture_metric_list])
-                l1 = np.mean([r['l1'] for r in texture_metric_list])
-                l2 = np.mean([r['l2'] for r in texture_metric_list])
-                console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
-
-
                 if writer is not None:
                     with torch.no_grad():
                         writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)
                         writer.add_scalar('eval/vert_3d_loss', vert_3d_loss.item(), epoch)
-                        writer.add_scalar('eval/psnr', psnr, epoch)
-                        writer.add_scalar('eval/ssim', ssim, epoch)
-                        writer.add_scalar('eval/lpips', lpips, epoch)
-                        writer.add_scalar('eval/l1', l1, epoch)
-                        writer.add_scalar('eval/l2', l2, epoch)
+
+                # ----- evaluation: texture metrics --------        
+                if args.render:
+                    psnr = np.mean([r['psnr'] for r in texture_metric_list])
+                    ssim = np.mean([r['ssim'] for r in texture_metric_list])
+                    lpips = np.mean([r['lpips'] for r in texture_metric_list])
+                    l1 = np.mean([r['l1'] for r in texture_metric_list])
+                    l2 = np.mean([r['l2'] for r in texture_metric_list])
+                    console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
+
+                    if writer is not None:
+                        with torch.no_grad():
+                            writer.add_scalar('eval/psnr', psnr, epoch)
+                            writer.add_scalar('eval/ssim', ssim, epoch)
+                            writer.add_scalar('eval/lpips', lpips, epoch)
+                            writer.add_scalar('eval/l1', l1, epoch)
+                            writer.add_scalar('eval/l2', l2, epoch)
 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)

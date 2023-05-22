@@ -185,11 +185,15 @@ class HandEncoder(nn.Module):
         }
 
 class LightEstimator(nn.Module):
-    def __init__(self):
+    def __init__(self, in_dim=512):
         super(LightEstimator, self).__init__()
+        if in_dim == 512:
+            conv1 = nn.Conv2d(512, 48, kernel_size=1, stride=2)#[48,14,14]
+        elif in_dim == 32: # efficientnetb3, input: b, 32, 56, 56
+            conv1 = nn.Conv2d(32, 48, kernel_size=1, stride=4)# [48,14,14]
         self.base_layers = nn.Sequential(
             # input: b, 512, 28, 28
-            nn.Conv2d(512, 48, kernel_size=1, stride=2),#[48,14,14]
+            conv1,
             nn.ReLU(inplace=True),
             nn.Conv2d(48, 48, kernel_size=3, stride=1),#[48,12,12]
             nn.ReLU(inplace=True),

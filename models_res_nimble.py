@@ -20,6 +20,7 @@ from pytorch3d.renderer import (
 from pytorch3d.renderer.lighting import DirectionalLights
 import pytorch3d.renderer as p3d_renderer
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
+from network.effnet_encoder import EffiEncoder
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
 from utils.traineval_util import Mano2Frei, trans_proj_j2d
 from utils.my_mano import MyMANOLayer
@@ -40,10 +41,16 @@ class Model(nn.Module):
 
         if pretrain == 'hr18sv2':
             self.features_dim = 1024 # for HRnet
+            self.low_feat_dim = 512 # not sure
+            self.base_encoder = ResEncoder(pretrain=pretrain, if_4c=if_4c)
         elif pretrain in ['res18', 'res50', 'res101']:
             self.features_dim = 2048
-        elif pretrain == 'efficientnet':
+            self.low_feat_dim = 512
+            self.base_encoder = ResEncoder(pretrain=pretrain, if_4c=if_4c)
+        elif pretrain == 'effb3':
             self.features_dim = 1536
+            self.low_feat_dim = 32
+            self.base_encoder = EffiEncoder(pretrain=pretrain)
 
         self.base_encoder = ResEncoder(pretrain=pretrain, if_4c=if_4c)
         
@@ -91,10 +98,10 @@ class Model(nn.Module):
             )
 
         if self.ifLight:
-            self.light_estimator = LightEstimator()
+            self.light_estimator = LightEstimator(self.low_feat_dim)
 
 
-    def forward(self, images, Ks=None, scale_gt=None, root_xyz=None):
+    def forward(self, images, Ks=None, root_xyz=None):
         if self.hand_model == 'mano_new':
             pred = self.ytbHand(images)
             outputs = {

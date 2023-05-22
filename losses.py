@@ -273,6 +273,14 @@ class LossFunction():
             bone_direc_loss = args.lambda_bone_direc * bone_direc_loss
             loss_dic['bone_direc'] = bone_direc_loss
         
+        # (used in full supervision) 3d bones -> gt 3d bones
+        if 'bone_direc_3d' in loss_used:
+            assert ('joints' in examples) and ('joints' in outputs), "Using bone_direc_3d but joints not inputted or outputted"
+            j3d_con = torch.ones_like(examples['joints'][:,:,0]).unsqueeze(-1)
+            bone_direc_loss_3d = bone_direction_loss(outputs['joints'], examples['joints'], j3d_con)
+            bone_direc_loss_3d = args.lambda_bone_direc_3d * bone_direc_loss_3d
+            loss_dic['bone_direc_3d'] = bone_direc_loss_3d
+        
         # (used in full supervision) 3d verts length loss of a given face. 3dv -> gt 3dv
         if 'edge_length' in loss_used:
             assert ('mano_verts' in outputs) and ('verts' in examples) and ('mano_faces' in outputs), "Using edge_length but verts or faces not outputted."

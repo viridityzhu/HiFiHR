@@ -11,7 +11,7 @@ from rich import print
 from scipy.linalg import orthogonal_procrustes
 
 
-def load_model(model,optimizer,scheduler, args):
+def load_model(model,optimizer,scheduler,args):
     current_epoch = 0
     
     #import pdb; pdb.set_trace()
