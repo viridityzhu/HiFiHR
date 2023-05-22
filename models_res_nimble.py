@@ -42,8 +42,11 @@ class Model(nn.Module):
             self.features_dim = 1024 # for HRnet
         elif pretrain in ['res18', 'res50', 'res101']:
             self.features_dim = 2048
-        self.base_encoder = ResEncoder(pretrain=pretrain, if_4c=if_4c)
+        elif pretrain == 'efficientnet':
+            self.features_dim = 1536
 
+        self.base_encoder = ResEncoder(pretrain=pretrain, if_4c=if_4c)
+        
         if hand_model == 'nimble':
             self.ncomps = [20, 30, 10] # shape, pose, tex respectively.
             self.hand_layer = MyNIMBLELayer(ifRender, device, shape_ncomp=self.ncomps[0], pose_ncomp=self.ncomps[1], tex_ncomp=self.ncomps[2])
@@ -104,6 +107,7 @@ class Model(nn.Module):
         batch_size = images.shape[0]
         # Use base_encoder to extract features
         # low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
+        
         low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
 
         # Use light_estimator to get light parameters
@@ -181,7 +185,6 @@ class Model(nn.Module):
                     # location=((0.0, 0.0, 0.0),),
                     device=device,
                 )
-                
 
             # move to the root relative coord. 
             # verts = verts - pred_root_xyz + root_xyz

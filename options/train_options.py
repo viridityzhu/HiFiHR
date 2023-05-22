@@ -157,6 +157,7 @@ def get_parser():
     parser.add_argument('--train_queries_frei',type=list,default=[])
     parser.add_argument('--train_queries_rhd',type=list,default=[])
     parser.add_argument('--train_queries_ho3d',type=list,default=[])
+    parser.add_argument('--train_queries_dart',type=list,default=[])
 
     
     parser.add_argument('--semi_ratio',type=float,default=None)
@@ -176,6 +177,8 @@ def get_parser():
     parser.add_argument('--rhd_base_path', type=str, default='/data/RHD/RHD_published_v2', help='Path to where the RHD dataset is located.')
     # For HO3D
     parser.add_argument('--ho3d_base_path', type=str, default=None, help='Path to where the RHD dataset is located.')
+    # For Dart
+    parser.add_argument('--dart_base_path', type=str, default=None, help='Path to where the RHD dataset is located.')
 
     # For Obman
     parser.add_argument('--base_path', type=str, default=None, help='Path to where the Obman dataset is located.')
