@@ -13,7 +13,7 @@ import torch.nn.functional as torch_f
 import lpips
 import utils.pytorch_ssim as pytorch_ssim
 
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from options import train_options
 from losses import LossFunction
@@ -27,9 +27,6 @@ from utils.fh_utils import AverageMeter,EvalUtil
 
 console = Console()
 test_log = {}
-
-torch.cuda.set_device(1)
-os.environ['CUDA_VISIBLE_DEVICES'] ='1, 2'
 
 def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, requires, args, writer=None):
     if mode_train:
@@ -51,8 +48,8 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
     
     for idx, (sample) in enumerate(train_loader):
-        # Get batch data        
-        examples = data_dic(sample, dat_name, set_name, args) 
+        # Get batch data
+        examples = data_dic(sample, dat_name, set_name, args)
         del sample
         
         root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
@@ -424,8 +421,7 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                         args.train_batch = args.val_batch
                         train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
                         torch.cuda.empty_cache()
-                    save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=console)
-                
+                    save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=console)   
                 scheduler.step()
 
     elif 'evaluation' in set_name:
@@ -454,7 +450,7 @@ if __name__ == '__main__':
                 setattr(args, parse_key, parse_value)
     
     args = train_options.make_output_dir(args)
-    args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.ROOT = 9
     args.ROOT_NIMBLE = 11
     args.lambda_pose = args.lambda_pose_list[0]
@@ -498,7 +494,7 @@ if __name__ == '__main__':
     if args.force_init_lr > 0: # default is -1, means not using this
         optimizer.param_groups[0]['lr'] = args.force_init_lr
 
-    model = nn.DataParallel(model.cuda(), device_ids=[1])
+    model = nn.DataParallel(model.cuda())
 
     loss_func = LossFunction()
     lpips_loss = lpips.LPIPS(net="alex").to(args.device)

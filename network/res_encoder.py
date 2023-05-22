@@ -1,4 +1,3 @@
-import os
 import torch
 import torch.nn as nn
 from torch.nn import init
@@ -7,20 +6,11 @@ import torchvision
 from torchvision import models
 import timm
 
-try:
-    from network.efficientnet_pt.model import EfficientNet
-except:
-    import sys
-    sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
-    from network.efficientnet_pt import EfficientNet
-
 
 class ResEncoder(nn.Module):
     def __init__(self, nc:int=4, nk:int=1, pretrain:str='hr18sv2', droprate=0.0, coordconv=False, norm = 'bn', if_4c=True):
         super(ResEncoder, self).__init__()
         self.mmpool = MMPool((1,1))
-        self.pool = nn.AvgPool2d(7, stride=1)
-        self.pretrain = pretrain
         if pretrain=='none':
             # 2-4-4-3 = 12 resblocks = 24 conv
             self.encoder1 = Base_4C(nc=nc, nk=nk, norm = norm, coordconv=coordconv)
@@ -42,8 +32,6 @@ class ResEncoder(nn.Module):
         elif 'hr18' in pretrain:
             self.encoder1 = HRnet_4C(pretrain, if_4c=if_4c)
             in_dim = 2048 
-        elif pretrain=='efficientnet':
-            self.encoder1 = EfficientNet.from_pretrained('efficientnet-b3')
         else: 
             print('unknown network')
         if if_4c:
@@ -52,20 +40,14 @@ class ResEncoder(nn.Module):
             self.norm_func = normalize_batch_3C
 
     def forward(self, x):
-        if self.pretrain == 'efficientnet':
-            features, low_features = self.encoder1.extract_features(x)# [B,1536,7,7] [B,32,56,56]
-            features = self.pool(features)
-            features = features.view(features.shape[0],-1) #[B,1536]
-            return low_features, features
-        else:
-            ################### PreProcessing
-            x = self.norm_func(x) 
-            #################### Backbone
-            #with torch.no_grad():
-            # low_features, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
-            low, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
-            features = self.mmpool(features).view(features.shape[0], -1) # [b, 1024, 7, 7] -> [b, 1024, 1, 1] -> [b, 1024]
-            return low, features 
+        ################### PreProcessing
+        x = self.norm_func(x) 
+        #################### Backbone
+        #with torch.no_grad():
+        # low_features, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+        low, features = self.encoder1(x)  # [b, 512, 14, 14] = 100352, 4: [b, 1024, 7, 7] = 50176
+        features = self.mmpool(features).view(features.shape[0], -1) # [b, 1024, 7, 7] -> [b, 1024, 1, 1] -> [b, 1024]
+        return low, features 
 
 
 class HandEncoder(nn.Module):

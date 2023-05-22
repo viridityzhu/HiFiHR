@@ -51,8 +51,6 @@ class Model(nn.Module):
             self.features_dim = 1536
             self.low_feat_dim = 32
             self.base_encoder = EffiEncoder(pretrain=pretrain)
-
-        self.base_encoder = ResEncoder(pretrain=pretrain, if_4c=if_4c)
         
         if hand_model == 'nimble':
             self.ncomps = [20, 30, 10] # shape, pose, tex respectively.
@@ -116,7 +114,6 @@ class Model(nn.Module):
         # low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
         
         low_features, features = self.base_encoder(images) # [b, 512, 14, 14], [b,1024]
-
         # Use light_estimator to get light parameters
         if self.ifLight:
             light_params = self.light_estimator(low_features)
@@ -192,6 +189,7 @@ class Model(nn.Module):
                     # location=((0.0, 0.0, 0.0),),
                     device=device,
                 )
+
 
             # move to the root relative coord. 
             # verts = verts - pred_root_xyz + root_xyz
