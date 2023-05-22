@@ -21,13 +21,12 @@ from data.dataset import get_dataset
 
 from utils.train_utils import *
 from utils.concat_dataloader import ConcatDataloader
-from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei
+from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei, ortho_project
 from utils.fh_utils import AverageMeter,EvalUtil
 
 
 console = Console()
 test_log = {}
-
 
 def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, requires, args, writer=None):
     if mode_train:
@@ -57,21 +56,29 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
-
         # ** positions are relative to middle root.
         examples['joints'] = examples['joints'] - root_xyz
         if 'verts' in examples:
             examples['verts'] = examples['verts'] - root_xyz
 
-        # Projection transformation, project joints to 2D
-        if 'joints' in outputs:
-            # j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz)
-            j2d = trans_proj_j2d(outputs, examples['Ks'], root_xyz=root_xyz) # do not need scale
-            outputs.update({'j2d': j2d})
-            if args.hand_model == 'nimble':
-                # nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
-                nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], root_xyz=root_xyz, which_joints='nimble_joints')
-                outputs.update({'nimble_j2d': nimble_j2d})
+        if dat_name == 'Dart':
+            # Projection transformation, project joints to 2D
+            if 'joints' in outputs:
+                j2d = ortho_project(outputs['joints'].float(), examples['ortho_intr'].float())
+                j2d = torch.FloatTensor(j2d).to(args.device)
+                outputs.update({'j2d': j2d})
+                if args.hand_model == 'nimble':
+                    nimble_j2d = ortho_project(outputs['nimble_joints'].float(), examples['ortho_intr'].float())
+                    nimble_j2d = torch.FloatTensor(nimble_j2d).to(args.device)
+                    outputs.update({'nimble_j2d': nimble_j2d})
+        else:
+            # Projection transformation, project joints to 2D
+            if 'joints' in outputs:
+                j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz)
+                outputs.update({'j2d': j2d})
+                if args.hand_model == 'nimble':
+                    nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
+                    outputs.update({'nimble_j2d': nimble_j2d})
         
         # ===================================
         #      Compute and backward loss
@@ -285,6 +292,12 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                     else:
                         train_queries = args.train_queries
                     base_path = args.ho3d_base_path
+                elif dat_name == 'Dart':
+                    if len(args.train_queries_dart)>0:
+                        train_queries = args.train_queries_dart
+                    else:
+                        train_queries = args.train_queries
+                    base_path = args.dart_base_path
                 
                 train_dat = get_dataset(
                     dat_name,
@@ -331,6 +344,9 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
             elif dat_name_val == 'HO3D':
                 val_queries = args.val_queries
                 base_path = args.ho3d_base_path
+            elif dat_name_val == 'Dart':
+                val_queries = args.val_queries
+                base_path = args.dart_base_path
             val_dat = get_dataset(
                 dat_name_val,
                 'evaluation',
@@ -405,7 +421,7 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                         args.train_batch = args.val_batch
                         train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
                         torch.cuda.empty_cache()
-                    save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=console)
+                    save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=console)   
                 scheduler.step()
 
     elif 'evaluation' in set_name:

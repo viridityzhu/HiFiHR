@@ -241,6 +241,33 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
         if 'open_2dj' in data_batch.keys():
             example_torch['open_2dj'] = data_batch['open_2dj_crop'].cuda()# idx(openpose) == idx(freihand)
             example_torch['open_2dj_con'] = data_batch['open_2dj_con'].cuda()
+    
+    elif dat_name == 'Dart':
+        example_torch['imgs'] = data_batch['image'].cuda()
+        example_torch['ortho_intr'] = data_batch['ortho_intr'].cuda()
+        example_torch['Ps'] = None
+        example_torch['Ks'] = None
+        example_torch['scales'] = None
+        
+        example_torch['idxs'] = data_batch['idxs'].cuda()
+        if 'mano_pose' in data_batch.keys():
+            manos = torch.squeeze(data_batch['mano_pose'],1).cuda()#[b,61]
+            example_torch['manos'] = manos
+        if 'joints_3d' in data_batch.keys():
+            joints = data_batch['joints_3d'].cuda()#[b,21,3]
+            example_torch['joints'] = joints
+            j2d_gt = data_batch['joints_2d'].cuda()
+            example_torch['j2d_gt'] = j2d_gt
+        if 'verts_3d' in data_batch.keys():
+            verts = data_batch['verts_3d'].cuda()
+            example_torch['verts'] = verts
+        if 'image_mask' in data_batch.keys():
+            masks = data_batch['image_mask'].cuda()#[b,3,224,224]
+            example_torch['masks'] = masks
+            #maskRGBs = data_batch['maskRGBs'].cuda()#[b,3,224,224]
+            segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
+            example_torch['segms_gt'] = segms_gt
+    
     return example_torch
         
 
@@ -315,6 +342,21 @@ def trans_proj_j2d(outputs, Ks_this, scales=None, is_ortho=False, root_xyz=None,
         j2d = proj_func(j3d, Ks_this)
     
     return j2d
+
+# Dart ortho proj func
+def ortho_project(points3d, ortho_cam):
+    x, y = points3d[:, :, 0], points3d[:, :, 1]
+    
+    u = ortho_cam[:, 0].unsqueeze(1) * x + ortho_cam[:, 1].unsqueeze(1)
+    v = ortho_cam[:, 0].unsqueeze(1) * y + ortho_cam[:, 2].unsqueeze(1)
+    
+    u = u.cpu().detach().numpy()
+    v = v.cpu().detach().numpy()
+    
+    u_, v_ = u[:, np.newaxis], v[:, np.newaxis]
+    
+    proj_points = np.concatenate([u_, v_], axis=1) #[b, 2, 21]
+    return np.transpose(proj_points, (0, 2, 1)) #[b, 21, 2]
 
 def save_2d_result(j2d_pred_ED_list,j2d_proj_ED_list,j2d_detect_ED_list,args,j2d_pred_list=[], j2d_proj_list=[], j2d_gt_list=[], j2d_detect_list=[], j2d_detect_con_list=[], epoch=0):
     save_dir = os.path.join(args.base_output_dir,'joint2d_result',str(epoch))
