@@ -223,7 +223,6 @@ class Model(nn.Module):
         outputs['mano_faces'] = self.mano_face.repeat(batch_size, 1, 1)
 
         return outputs
-
     # get ndc fx, fy, cx, cy from Ks
     def get_ndc_fx_fy_cx_cy(self, Ks):
         ndc_fx = Ks[:, 0, 0] * 2 / 224.0

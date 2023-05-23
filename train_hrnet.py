@@ -14,7 +14,6 @@ import lpips
 import utils.pytorch_ssim as pytorch_ssim
 
 from torch.utils.tensorboard import SummaryWriter
-# from tensorboardX import SummaryWriter
 
 from options import train_options
 from losses import LossFunction
@@ -56,7 +55,6 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         del sample
         
         root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
-
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 

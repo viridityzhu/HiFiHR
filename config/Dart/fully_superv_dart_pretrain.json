@@ -7,7 +7,7 @@
   "writer_topic": "runs/dart/texture/", 
   "total_epochs": 500,
   "init_lr": 0.001,
-  "force_init_lr": 0.0000063,
+  "force_init_lr": 0.00005,
   "lr_steps": [50, 80, 110, 160, 200, 300, 350, 400, 450],
   "lr_gamma": 0.5,
   "save_interval": 10,

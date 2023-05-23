@@ -15,11 +15,6 @@ from utils.train_utils import *
 from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, save_2d_result,save_2d, mano_fitting, trans_proj, visualize, write_to_tb
 from utils.fh_utils import AverageMeter,EvalUtil
-from tensorboardX import SummaryWriter
-
-torch.cuda.set_device(1)
-os.environ['CUDA_VISIBLE_DEVICES'] ='1'
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, requires, args, writer=None):
     if mode_train:
@@ -144,8 +139,6 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
 
-# optimizer = None
-# scheduler = None
 
 def train(base_path, set_name=None, writer = None):
     """
@@ -186,12 +179,6 @@ def train(base_path, set_name=None, writer = None):
                 else:
                     train_queries = args.train_queries
                 base_path = args.ho3d_base_path
-            elif dat_name == 'Dart':
-                if len(args.train_queries_dart)>0:
-                    train_queries = args.train_queries_dart
-                else:
-                    train_queries = args.train_queries
-                base_path = args.dart_base_path
             
             train_dat = get_dataset(
                 dat_name,
@@ -228,9 +215,6 @@ def train(base_path, set_name=None, writer = None):
         elif dat_name_val == 'HO3D':
             val_queries = args.val_queries
             base_path = args.ho3d_base_path
-        elif dat_name_val == 'Dart':
-            val_queries = args.val_queries
-            base_path = args.dart_base_path
         val_dat = get_dataset(
             dat_name_val,
             'evaluation',
@@ -323,8 +307,7 @@ if __name__ == '__main__':
                 setattr(args, parse_key, parse_value)
     
     args = train_options.make_output_dir(args)
-    # args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    args.device = device
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     if args.is_write_tb:
         log_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
@@ -344,15 +327,13 @@ if __name__ == '__main__':
 
     if args.new_model:
         print("Using new model... Equipping Resnet and NIMBLE!!")
-        model = models_new.Model(ifRender=args.render, device=args.device, if_4c=False, hand_model='nimble', use_mean_shape=False, pretrain='res50')
-        # model = models_new.Model(ifRender=args.render, device=args.device)
+        model = models_new.Model(ifRender=args.render, device=args.device)
     else:
         model = models.Model(args=args)
     
-    # model, current_epoch = load_model(model, optimizer, scheduler, args)
     model, current_epoch = load_model(model, args)
 
-    model = nn.DataParallel(model, device_ids=[1])
+    model = nn.DataParallel(model.cuda())
 
     # Optionally freeze parts of the network
     freeze_model_modules(model, args)
