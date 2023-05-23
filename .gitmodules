@@ -1,0 +1,3 @@
+[submodule "utils/NIMBLE_model"]
+	path = utils/NIMBLE_model
+	url = https://github.com/viridityzhu/NIMBLE_model

@@ -4,7 +4,7 @@
   "freihand_base_path": "/mnt/data/zhuoran/FreiHand",
   "base_out_path": "outputs/self_rhd/texture",
   "is_write_tb": true,
-  "writer_topic": "run/self_rhd/texture/", 
+  "writer_topic": "runs/self_rhd/texture/", 
   "total_epochs": 500,
   "init_lr": 0.001,
   "force_init_lr": 0.001,

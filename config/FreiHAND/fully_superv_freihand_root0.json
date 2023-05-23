@@ -1,0 +1,45 @@
+{
+    "train_datasets":["FreiHand"],
+    "val_datasets":["FreiHand"],
+    "freihand_base_path": "/storage_fast/jyzhu/HandRecon/freihand",
+    "base_out_path": "/storage_fast/jyzhu/HandRecon/outputs/freihand/root0",
+    "is_write_tb": true,
+    "writer_topic": "runs/freihand/root0/", 
+    "total_epochs": 150,
+    "init_lr": 0.0005,
+    "lr_steps": [50, 80, 100, 120, 150],
+    "lr_gamma": 0.5,
+    "save_interval": 3,
+    "controlled_exp": false,
+    "controlled_size": 1000,
+    "train_batch":64,
+    "val_batch":16,
+    "num_workers":16,
+    "if_test": true,
+    "save_2d": false,
+    "save_3d": false,
+    "save_mode": "only_latest",
+    "demo_freq": 200,
+
+    "new_model": true,
+    "render": false,
+    "four_channel": false,
+    "hand_model": "nimble",
+    "use_mean_shape": true,
+
+    "lambda_j3d": 10,
+    "lambda_pose_steps": [10, 20],
+    "lambda_pose_list": [0.01, 0.001, 0.00001],
+
+    "pretrain": "res101",
+
+
+
+    "train_queries": ["trans_images","trans_Ks","trans_joints", "scales"],
+    "val_queries": ["images","Ks","joints", "scales"],
+    "losses": ["joint_3d", "mpose"], 
+    "train_requires": ["joints", "verts"],
+    "test_requires": ["joints", "verts"],
+    "task": "train",
+    "mode": ["training"]
+}
