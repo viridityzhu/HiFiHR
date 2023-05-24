@@ -30,8 +30,8 @@
 
     "lambda_j3d": 10,
     "lambda_vert_3d": 10,
-    "lambda_pose_steps": [20, 35],
-    "lambda_pose_list": [0.06, 0.006, 0.0006],
+    "lambda_pose_steps": [20, 35, 70],
+    "lambda_pose_list": [0.4, 0.01, 0.001, 0.0001],
     "lambda_shape_steps": [10, 20],
     "lambda_shape_list": [0.1, 0.001, 0.00001],
 
