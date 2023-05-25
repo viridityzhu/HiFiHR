@@ -29,7 +29,10 @@ from utils.fh_utils import proj_func
 import copy
 import imageio
 from pytorch3d.io import load_obj
-from manotorch.manolayer import ManoLayer
+try:
+    from manotorch.manolayer import ManoLayer
+except:
+    print("ManoTorch not installed.")
 from utils.DARTset_utils import (aa_to_rotmat, fit_ortho_param, ortho_project,
                            plot_hand, rotmat_to_aa)
 
