@@ -306,6 +306,12 @@ class LossFunction():
                 scale_loss = torch_f.mse_loss(cal_scale, examples['scales'].to(device))
                 scale_loss = args.lambda_scale * scale_loss
                 loss_dic['scale'] = scale_loss
+            elif dat_name == 'RHD':
+                cal_scale = torch.sqrt(torch.sum((outputs['joints'][:,9]-outputs['joints'][:,10])**2,1))
+                scale_loss = torch_f.mse_loss(cal_scale, examples['scales'].to(device))
+                scale_loss = args.lambda_scale * scale_loss
+                loss_dic['scale'] = scale_loss
+                
 
 
         # photometric loss

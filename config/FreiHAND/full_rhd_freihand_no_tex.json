@@ -5,7 +5,7 @@
     "base_out_path": "outputs/freihand/fully_rhd_no_tex",
     "is_write_tb": true,
     "writer_topic": "runs/fully_rhd/no_texture/",
-    "total_epochs": 500,
+    "total_epochs": 600,
     "init_lr": 0.001,
     "force_init_lr": 0.0001,
     "lr_steps": [80, 160, 200, 300, 350, 400, 450 ],
@@ -40,9 +40,10 @@
     "lambda_shape_steps": [270, 300],
     "lambda_shape_list": [0.1, 0.001, 0.00001],
     "lambda_percep": 0.000001,
+    "lambda_bone_direc_3d": 8,
 
     "pretrain": "effb3",
-    "pretrain_model": "/home/jiayin/HandRecon/outputs/freihand/fully_rhd_no_tex/model/texturehand_latest.t7",
+    "pretrain_model": "/home/jiayin/HandRecon/outputs/freihand/fully_rhd_no_tex/fully_rhd_no_tex/model/texturehand_latest.t7",
 
     "train_queries": ["trans_images", "trans_Ks", "trans_joints", "scales", "trans_verts", "trans_masks"],
     "val_queries": [ "images", "Ks", "joints", "scales", "verts", "masks" ],
