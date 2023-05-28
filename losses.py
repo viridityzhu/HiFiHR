@@ -4,7 +4,7 @@ import torch.nn.functional as torch_f
 from utils.perceptual_loss import PerceptualLoss
 
 import utils.pytorch_ssim as pytorch_ssim
-from utils.losses_util import bone_direction_loss, tsa_pose_loss, calc_laplacian_loss, edge_length_loss#image_l1_loss, iou_loss, ChamferLoss,
+from utils.losses_util import bone_direction_loss, tsa_pose_loss, calc_laplacian_loss, edge_length_loss, iou #image_l1_loss, iou_loss, ChamferLoss,
 
 # !depreciated
 def loss_func(examples, outputs, loss_used, dat_name, args) -> dict:
@@ -313,6 +313,43 @@ class LossFunction():
                 loss_dic['scale'] = scale_loss
                 
 
+        # self-supervised photometric loss
+        if 're_img' in outputs and ('re_sil' in outputs) and ('texture_con' in examples):
+            maskRGBs = outputs['maskRGBs']#examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
+            re_img = outputs['re_img']
+            crit = nn.L1Loss()
+
+            # texture loss: rendered img -> masked original img
+            #texture_loss = crit(re_img, maskRGBs).cpu()
+            texture_con_this = examples['texture_con'].view(-1,1,1,1).repeat(1,re_img.shape[1],re_img.shape[2],re_img.shape[3])
+            texture_loss = (torch.sum(torch.abs(re_img-maskRGBs).mul(texture_con_this**2))/torch.sum((texture_con_this**2)))
+            texture_loss = args.lambda_texture * texture_loss
+            loss_dic['texture_self'] = texture_loss
+
+            # mean rgb loss
+            #loss_mean_rgb = torch_f.mse_loss(torch.mean(maskRGBs),torch.mean(re_img)).cpu()
+            
+            loss_mean_rgb = (torch.sum(torch.abs(torch.mean(re_img.reshape(re_img.shape[0],-1),1)-torch.mean(maskRGBs.reshape(maskRGBs.shape[0],-1),1)).mul(examples['texture_con']**2))/torch.sum((examples['texture_con']**2)))
+            loss_mean_rgb = args.lambda_mrgb * loss_mean_rgb
+            loss_dic['mrgb_self'] = loss_mean_rgb
+
+            # ssim texture loss
+            ssim_tex = pytorch_ssim.ssim(re_img, maskRGBs)
+            loss_ssim_tex = 1 - ssim_tex
+            loss_ssim_tex = args.lambda_ssim_tex * loss_ssim_tex
+            loss_dic['ssim_tex_self'] = loss_ssim_tex
+
+            # ssim texture depth loss: ssim between rendered img -- rendered depth. ??? is it reasonable?
+            # ssim_tex_depth = pytorch_ssim.ssim(re_img, outputs['re_depth'].unsqueeze(1).repeat(1,3,1,1))
+            # loss_ssim_tex_depth = 1 - ssim_tex_depth
+            # loss_ssim_tex_depth = args.lambda_ssim_tex * loss_ssim_tex_depth
+            # loss_dic['ssim_tex_depth_self'] = loss_ssim_tex_depth
+            
+            # ssim depth loss: ssim between masked original img -- rendered depth. ???
+            # ssim_inrgb_depth = pytorch_ssim.ssim(maskRGBs, outputs['re_depth'].unsqueeze(1).repeat(1,3,1,1))
+            # loss_ssim_inrgb_depth = 1 - ssim_inrgb_depth
+            # loss_ssim_inrgb_depth = args.lambda_ssim_tex * loss_ssim_inrgb_depth
+            # loss_dic['ssim_inrgb_depth'] = loss_ssim_inrgb_depth
 
         # photometric loss
         if 're_img' in outputs and ('re_sil' in outputs):
@@ -364,6 +401,10 @@ class LossFunction():
             sil_loss = crit(outputs['re_sil'], examples['segms_gt'].unsqueeze(1).float())
             loss_dic['sil'] = args.lambda_silhouette * sil_loss
 
+        if 're_sil' in outputs and 'segms_gt' in examples:
+            iou_loss = iou(outputs['re_sil'], examples['segms_gt'].unsqueeze(1).float())
+            loss_dic['iou'] = args.lambda_iou * iou_loss
+
         # perceptual loss: rendered img -> gt img. not used at all.
         # if 'perc_features' in outputs and ('texture_con' in examples):
         #     perc_features = outputs['perc_features']
@@ -396,7 +437,7 @@ class LossFunction():
         if 'mpose' in loss_used:
             assert 'pose_params' in outputs, "Using mpose as loss but pose_params not outputted."
             pose_loss = torch_f.mse_loss(outputs['pose_params'], torch.zeros_like(outputs['pose_params']).to(device))
-            # pose_loss = outputs['pose_params'].pow(2).sum(dim=-1).sqrt().mean()*10  
+            # pose_loss = outputs['pose_params'].pow(2).sum(dim=-1).sqrt().mean()*10
             pose_loss = args.lambda_pose * pose_loss
             loss_dic['mpose'] = pose_loss
 

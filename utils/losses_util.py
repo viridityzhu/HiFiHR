@@ -362,3 +362,17 @@ def calc_laplacian_loss(faces, vertices):
     loss_laplacian = mesh_laplacian_smoothing(mesh, method="uniform")
     
     return loss_laplacian
+
+def IOU(mask1,mask2):
+    #expects binary mask and only zeros and ones
+    b , c , h , w = mask1.size()
+    eps = 1e-7
+    mul = (mask1 * mask2).reshape(b,-1).sum(1)
+    add = (mask1 + mask2).reshape(b,-1).sum(1)
+
+    iou = mul / (add - mul)
+    return iou
+
+def iou(Sgt,Sest):
+    iou_ = IOU(Sgt,Sest)
+    return 1 - torch.mean(iou_)

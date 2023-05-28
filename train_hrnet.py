@@ -52,14 +52,20 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         examples = data_dic(sample, dat_name, set_name, args)
         del sample
         
-        root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
+        if set_name == 'evaluation' and dat_name == 'HO3D':
+            root_xyz = examples['root_xyz'].unsqueeze(1)
+        else:
+            root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
+        
+        # root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
         # ** positions are relative to middle root.
-        examples['joints'] = examples['joints'] - root_xyz
-        if 'verts' in examples:
-            examples['verts'] = examples['verts'] - root_xyz
+        if set_name != 'evaluation' and dat_name != 'HO3D':
+            examples['joints'] = examples['joints'] - root_xyz
+            if 'verts' in examples:
+                examples['verts'] = examples['verts'] - root_xyz
 
         if dat_name == 'Dart':
             # Projection transformation, project joints to 2D
@@ -141,6 +147,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         # Save visualization and print information
         batch_time.update(time.time() - end)
+        
         visualize(mode_train, dat_name, epoch, idx, outputs, examples, args, writer=writer, writer_tag=set_name, console=console)
         # Print information
         if idx % args.print_freq == 0:
@@ -171,7 +178,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
     # after one epoch....
     # dump results
-    if dat_name == 'FreiHand' or dat_name == 'HO3D':
+    if dat_name == 'FreiHand':
         if mode_train:
             pred_out_path = os.path.join(args.pred_output,'train',str(epoch))
             if args.save_3d:
@@ -250,6 +257,26 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
+    
+    if dat_name == 'HO3D':
+        if mode_train:
+            pred_out_path = os.path.join(args.pred_output,'train',str(epoch))
+            if args.save_3d:
+                os.makedirs(pred_out_path, exist_ok=True)
+                pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
+                dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
+        else: # for evaluation
+            # ================================
+            #          Evaluation
+            # ================================
+            pred_out_path = os.path.join(args.pred_output,'test',str(epoch))
+            if epoch%args.save_interval==0 and epoch>0:
+                os.makedirs(pred_out_path, exist_ok=True)
+                pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
+                # HO3D dump evaluation result for online evaluation
+                dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
+                # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
+                # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
 
 
 def train(base_path, set_name=None, writer = None, optimizer = None, scheduler = None):
@@ -488,6 +515,9 @@ if __name__ == '__main__':
             optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
         elif args.optimizer == "AdamW":
             optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
+    elif 'evaluation' in args.mode:
+        optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
     
     model, current_epoch, optimizer, scheduler = load_model(model, optimizer, scheduler, args)
