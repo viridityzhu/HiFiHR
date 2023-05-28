@@ -49,7 +49,7 @@
   "pretrain_model": "/home/zhuoran/HandRecon/outputs/pretrain_models/RHD/texturehand_latest_rhd.t7",
 
   "train_queries": ["trans_images","trans_Ks","trans_joints", "scales", "trans_verts", "trans_masks", "trans_open_2dj", "trans_joints2d"],
-  "val_queries": ["images","Ks","open_2dj", "scales", "masks", "verts", "joints"],
+  "val_queries": ["trans_images","trans_Ks","trans_open_2dj", "scales", "trans_masks", "trans_verts", "trans_joints"],
   "losses": ["open_2dj", "mpose", "mshape", "mtex", "open_bone_direc", "texture_self", "mrgb_self", "ssim_tex_self"], 
   "train_requires": ["joints", "verts"],
   "test_requires": ["joints", "verts"],

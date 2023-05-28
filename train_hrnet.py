@@ -58,8 +58,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             root_xyz = examples['root_xyz'].unsqueeze(1)
         else:
             root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
-        
-        # root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
+
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
@@ -272,13 +271,13 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             #          Evaluation
             # ================================
             pred_out_path = os.path.join(args.pred_output,'test',str(epoch))
-            if epoch%args.save_interval==0 and epoch>0:
-                os.makedirs(pred_out_path, exist_ok=True)
-                pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
-                # HO3D dump evaluation result for online evaluation
-                dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
-                # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
-                # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
+            # if epoch%args.save_interval==0 and epoch>0:
+            os.makedirs(pred_out_path, exist_ok=True)
+            pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
+            # HO3D dump evaluation result for online evaluation
+            dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
+            # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
+            # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
 
 
 def train(base_path, set_name=None, writer = None, optimizer = None, scheduler = None):

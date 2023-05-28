@@ -111,7 +111,6 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             # 43 & 44 Output 3d nimble joints
             if nimble_joints is not None:
                 j3d_out = nimble_joints[0].detach().cpu().numpy()
-                print('nimble j3d_out: ', j3d_out)
                 plot_hand_3d(ax, j3d_out, order='xyz', dataset_name='nimble')
                 if lims is not None:
                     ax.set_xlim(lims[0],lims[1])
@@ -122,7 +121,6 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             # 32 & 34 Output 3d joints
             if joints is not None:
                 j3d_out = joints[0].detach().cpu().numpy()
-                print('mano j3d_out: ', j3d_out)
                 plot_hand_3d(ax, j3d_out, order='xyz')
                 if lims is not None:
                     ax.set_xlim(lims[0],lims[1])
