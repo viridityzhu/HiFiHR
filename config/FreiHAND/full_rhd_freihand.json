@@ -7,7 +7,7 @@
     "writer_topic": "runs/fully_rhd/texture/",
     "total_epochs": 600,
     "init_lr": 0.001,
-    "force_init_lr": 0.00005,
+    "force_init_lr": 0.000001,
     "lr_steps": [80, 160, 200, 300, 350, 400, 450 ],
     "lr_gamma": 0.5,
     "save_interval": 10,
@@ -30,7 +30,7 @@
     "base_loss_fn": "L1",
     "use_mean_shape": false,
     "lambda_j3d": 200,
-    "lambda_vert_3d": 200,
+    "lambda_vert_3d": 150,
     "lambda_edge_len": 100,
     "lambda_silhouette": 0.0008,
     "lambda_tex_reg_steps": [260, 270],
@@ -47,7 +47,7 @@
 
 
     "pretrain": "effb3",
-    "pretrain_model": "outputs/freihand/fully_rhd/model/texturehand_latest.t7",
+    "pretrain_model": "outputs/freihand/fully_rhd/model/texturehand_520.t7",
 
     "train_queries": ["trans_images", "trans_Ks", "trans_joints", "scales", "trans_verts", "trans_masks"],
     "val_queries": [ "images", "Ks", "joints", "scales", "verts", "masks" ],
