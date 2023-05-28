@@ -90,22 +90,22 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # ===================================
         #      Compute and backward loss
         # ===================================
-        loss_used = args.losses
+        if mode_train: # only compute loss for training
+            loss_used = args.losses
+                
+            # Compute loss function
+            loss_dic = loss_func(examples, outputs, loss_used, dat_name, args)
+            loss = torch.zeros(1).float().to(args.device)
+            for loss_key in loss_used:
+                # if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
+                loss += loss_dic[loss_key]
+                    #print(loss_key,loss_dic[loss_key],loss_dic[loss_key].device)
             
-        # Compute loss function
-        loss_dic = loss_func(examples, outputs, loss_used, dat_name, args)
-        loss = torch.zeros(1).float().to(args.device)
-        for loss_key in loss_used:
-            # if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
-            loss += loss_dic[loss_key]
-                #print(loss_key,loss_dic[loss_key],loss_dic[loss_key].device)
+            loss_dic['loss']=loss
+            if loss < 1e-10:
+                print('loss is less than 1e-10')
+                continue
         
-        loss_dic['loss']=loss
-        if loss < 1e-10:
-            print('loss is less than 1e-10')
-            continue
-        
-        if mode_train:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
