@@ -90,22 +90,24 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # ===================================
         #      Compute and backward loss
         # ===================================
+        loss_used = args.losses
+        loss = torch.zeros(1).float().to(args.device)
+
         if mode_train: # only compute loss for training
-            loss_used = args.losses
-                
-            # Compute loss function
             loss_dic = loss_func(examples, outputs, loss_used, dat_name, args)
-            loss = torch.zeros(1).float().to(args.device)
             for loss_key in loss_used:
                 # if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
                 loss += loss_dic[loss_key]
                     #print(loss_key,loss_dic[loss_key],loss_dic[loss_key].device)
+        else:
+            loss_dic = {}
             
-            loss_dic['loss']=loss
-            if loss < 1e-10:
-                print('loss is less than 1e-10')
-                continue
+        loss_dic['loss']=loss
+        if loss < 1e-10 and len(loss_dic.keys())>1:
+            print('loss is less than 1e-10')
+            continue
         
+        if mode_train:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -290,15 +292,15 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
     # ==============================
     with console.status("Preparing dataset...", spinner="bounce"):
         assert set_name is not None, "Mode is not provided. Should be training or evaluation."
+        if args.controlled_exp:
+            # Use subset of datasets so that final dataset size is constant
+            limit_size = int(args.controlled_size / len(args.train_datasets))
+        else:
+            limit_size = None
 
         if 'training' in set_name:
             # initialize train datasets
             train_loaders = []
-            if args.controlled_exp:
-                # Use subset of datasets so that final dataset size is constant
-                limit_size = int(args.controlled_size / len(args.train_datasets))
-            else:
-                limit_size = None
             for dat_name in args.train_datasets:# iteration = min(dataset_len)/batch_size; go each dataset at a batchsize
                 if dat_name == 'FreiHand':
                     if len(args.train_queries_frei)>0:
@@ -381,6 +383,7 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                 base_path,
                 queries = val_queries,
                 train = False,
+                limit_size=limit_size,
                 #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
             )
             print("Validation dataset size: {}".format(len(val_dat)))
