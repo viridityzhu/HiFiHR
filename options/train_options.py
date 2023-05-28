@@ -124,6 +124,7 @@ def get_parser():
     parser.add_argument('--lambda_tex_reg_steps', type=list, default=[])#0.001
     parser.add_argument('--lambda_pca_text', type=float, default=1e-6)
     parser.add_argument('--lambda_mrgb', type=float, default=1e-3)
+    parser.add_argument('--lambda_iou', type=float, default=1e-3)
     parser.add_argument('--lambda_bone_direc', type=float, default=0.1)
     parser.add_argument('--lambda_bone_direc_3d', type=float, default=0.1)
     parser.add_argument('--lambda_edge_len', type=float, default=0.1)
