@@ -70,6 +70,12 @@ def get_dataset(
             base_path=base_path,
             set_name = set_name,)
         sides = 'both'
+
+    elif dat_name == 'HO3D':
+        pose_dataset = HO3D(
+            base_path=base_path,
+            set_name = set_name,)
+        sides = 'right'
     else:
         print("not supported dataset.")
         return
@@ -1011,7 +1017,360 @@ class HandDataset(Dataset):
                 sample['K_crop'] = K_crop
             '''
             #415 
+        if self.dat_name == 'HO3D':
+            image = self.pose_dataset.get_img(idx)#[3,480,640]
+            if 'base_images' in query:
+                sample['base_images']=func_transforms.to_tensor(image).float()
+            
+            if 'trans_masks' in query or 'base_masks' in query:
+                mask = self.pose_dataset.get_masks(idx)
+                base_masks = torch.round(func_transforms.to_tensor(mask))
+                if 'base_masks' in query:
+                    sample['base_masks']=base_masks
+                hand_mask = base_masks[0]
+                obj_mask = base_masks[2]
+            
+            if 'base_depths' in query:
+                depth = self.pose_dataset.get_depth(idx)#[3,480,640]
+                '''
+                base_depth = func_transforms.to_tensor(depth)
+                depth_scale = 0.00012498664727900177
+                dpt = base_depth[:, :, 2] + base_depth[:, :, 1] * 256
+                dpt = dpt * depth_scale
+                sample['base_depths']=dpt
+                '''
+                base_depth = np.array(depth)
+                base_depth = depth_two_uint8_to_float(base_depth[:, :, 0], base_depth[:, :, 1])
+                sample['depth']=func_transforms.to_tensor(base_depth).float()#[1,480,640]
 
+            if 'open_2dj' in query or "trans_open_2dj" in query:
+                open_2dj = self.pose_dataset.get_open_2dj(idx)
+                sample['open_2dj']=open_2dj
+                open_2dj_con = self.pose_dataset.get_open_2dj_con(idx)
+                sample['open_2dj_con']=open_2dj_con
+
+            meta = self.pose_dataset.get_meta(idx)
+                        
+            if 'handPose' in meta.keys():
+                sample['hand_pose'] = torch.from_numpy(meta['handPose']).float()
+            if 'handBeta' in meta.keys():
+                sample['hand_shape'] = torch.from_numpy(meta['handBeta']).float()
+            if 'camMat' in meta.keys():
+                Ks = torch.from_numpy(meta['camMat']).float()
+                Ks = torch.mm(Ks,self.pose_dataset.cam_extr)#check merge cam extr to cam intr
+                sample['camMat'] = Ks
+            if 'handTrans' in meta.keys():
+                sample['handTrans'] = torch.from_numpy(meta['handTrans']).float()
+            if 'handJoints3D' in meta.keys():
+                j3d = torch.from_numpy(meta['handJoints3D']).float()
+                #j3d[:,0]=-j3d[:,0]
+                
+            if 'objCorners3D' in meta.keys():
+                obj6d = torch.from_numpy(meta['objCorners3D']).float()
+                uv6 = proj_func(obj6d.unsqueeze(0), Ks.unsqueeze(0))
+                # side = 'right'
+                uv6 = uv6.squeeze(0)
+                sample['uv6'] = uv6
+            
+            if 'handBoundingBox' in meta.keys():#for evaluation set
+                uv21 = torch.tensor([[meta['handBoundingBox'][0],meta['handBoundingBox'][1]],[meta['handBoundingBox'][2],meta['handBoundingBox'][3]]])
+                
+                # add
+                sample['root_xyz'] = j3d
+                
+                if 'xyz21_normed' in query:
+                    joint_root = j3d[0,:]
+                    joint_rel = j3d - joint_root
+                    index_root_bone_length = torch.sqrt(torch.sum((joint_rel[5, :] - joint_rel[4, :])**2))
+                    sample['keypoint_scale'] = index_root_bone_length
+                    sample['xyz21_normed'] = j3d/index_root_bone_length
+            else:
+                uv21 = proj_func(j3d.unsqueeze(0), Ks.unsqueeze(0))
+                # make coords relative to root joint
+                sample['xyz21'] = j3d
+                if 'xyz21_normed' in query:
+                    joint_root = j3d[0,:]
+                    joint_rel = j3d - joint_root
+                    index_root_bone_length = torch.sqrt(torch.sum((joint_rel[5, :] - joint_rel[4, :])**2))
+                    sample['keypoint_scale'] = index_root_bone_length
+                    sample['xyz21_normed'] = j3d/index_root_bone_length
+            uv21 = uv21.squeeze(0)
+            sample['uv21'] = uv21
+
+            """Hand CROP"""
+            ho_scope = 0
+            if ho_scope:
+                uv_all = torch.cat((uv21,uv6),0)
+                scale_num = 2
+            else:
+                uv_all = uv21
+                scale_num = 4
+            #crop_center = torch.mean(uv_all,0)
+            crop_center = (torch.max(uv_all,0)[0]+torch.min(uv_all,0)[0])/2
+            #crop_center = uv21[4,:]#[2]
+            #crop_center.view(2)
+            sample['crop_center0']=crop_center
+            self.crop_center_noise = True
+            if self.crop_center_noise:
+                noise = 5 * torch.randn([2])#torch.normal(0, 20, size=(2))
+                crop_center = noise + crop_center
+            
+            crop_scale_noise = torch.ones(1)
+            self.crop_scale_noise = True
+            if self.crop_scale_noise:
+                crop_scale_noise = (1 - 1.1) * torch.rand(1) + 1 - 0.1#(1.2 - 1) * torch.rand(1) + 1
+            #sample['crop_scale_noise']=crop_scale_noise
+            #uv_h = uv21[:,1]
+            #uv_w = uv21[:,0]
+            uv_h = uv_all[:,1]
+            uv_w = uv_all[:,0]
+            uv_hw = torch.stack([uv_w,uv_h],1)
+            min_uv = torch.max(torch.min(uv_hw,0)[0],torch.zeros(2)) - torch.tensor([10.0,10.0])
+            #max_uv = torch.min(torch.max(uv_hw,0)[0],torch.ones(2)*self.inp_res)
+            max_uv = torch.min(torch.max(uv_hw,0)[0],torch.tensor([640.0,480.0])) + torch.tensor([10.0,10.0])
+            #sample['max_uv'] = max_uv
+            #sample['min_uv'] = min_uv
+            #sample['uv_hw'] = uv_hw
+
+            crop_size_best = scale_num*torch.max(max_uv-crop_center,crop_center-min_uv)# 2*
+            crop_size_best = torch.max(crop_size_best)
+            crop_size_best = torch.min(torch.max(crop_size_best,torch.ones(1)*50.0),torch.ones(1)*640.0)
+            #sample['crop_size_best']=crop_size_best
+            # calculate necessary scaling
+            scale = self.inp_res1 / crop_size_best
+            #scale = torch.min(torch.max(scale,torch.ones(1)),torch.ones(1)*10.0)#check
+            scale = torch.min(scale,torch.ones(1)*10.0)
+            scale = scale * crop_scale_noise
+            sample['crop_scale'] = scale
+            # Crop image
+            crop_size_scales = self.inp_res1 / scale
+            sample['crop_size_scales'] = crop_size_scales
+            #y1 = crop_center[0] - crop_size_scales//2
+            y1 = crop_center[1] - crop_size_scales//2
+            y2 = y1 + crop_size_scales
+            #x1 = crop_center[1] - crop_size_scales//2
+            x1 = crop_center[0] - crop_size_scales//2
+            x2 = x1 + crop_size_scales
+            sample['y1']=y1
+            sample['y2']=y2
+            sample['x1']=x1
+            sample['x2']=x2
+
+            img_crop = func_transforms.resized_crop(image, y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1])
+            if 'trans_images' in query:
+                sample['img_crop'] = func_transforms.to_tensor(img_crop).float()
+            
+            if 'trans_depth' in query:
+                depth_crop = func_transforms.resized_crop(depth, y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1])
+                depth_crop = np.array(depth_crop)
+                depth_crop = depth_two_uint8_to_float(depth_crop[:, :, 0], depth_crop[:, :, 1])
+                sample['depth_crop']=func_transforms.to_tensor(depth_crop).float()#[1,320,320]
+            
+            if 'trans_masks' in query or 'base_masks' in query:
+                hand_mask_crop = func_transforms.resized_crop(mask.getchannel(0), y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1],interpolation=1)
+                if 'trans_masks' in query:
+                    #hand_mask_crop = ((func_transforms.to_tensor(hand_mask_crop)*255)>0).int()
+                    hand_mask_crop = (func_transforms.to_tensor(hand_mask_crop)).round()
+                    sample['hand_mask_crop'] = hand_mask_crop
+                obj_mask_crop = func_transforms.resized_crop(mask.getchannel(2), y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1])
+                if 'trans_masks' in query:
+                    obj_mask_crop = (func_transforms.to_tensor(obj_mask_crop)).round()
+                    sample['obj_mask_crop'] = obj_mask_crop
+
+            # Modify uv21
+            uv21_u = (uv21[:,0] - crop_center[0]) * scale + self.inp_res1 // 2
+            uv21_v = (uv21[:,1] - crop_center[1]) * scale + self.inp_res1 // 2
+            uv21_crop = torch.stack([uv21_u,uv21_v],1)
+            if 'trans_joints2d' in query:
+                sample['uv21_crop'] = uv21_crop
+
+            # Modify uv6
+            if 'uv6_crop' in query:
+                uv6_u = (uv6[:,0] - crop_center[0]) * scale + self.inp_res1 // 2
+                uv6_v = (uv6[:,1] - crop_center[1]) * scale + self.inp_res1 // 2
+                uv6_crop = torch.stack([uv6_u,uv6_v],1)
+                sample['uv6_crop'] = uv6_crop
+            # Modify openpose
+            if 'open_2dj' in query or "trans_open_2dj" in query:
+                open_2dj_u = (open_2dj[:,0] - crop_center[0]) * scale + self.inp_res1 // 2
+                open_2dj_v = (open_2dj[:,1] - crop_center[1]) * scale + self.inp_res1 // 2
+                open_2dj_crop = torch.stack([open_2dj_u,open_2dj_v],1)
+                sample['open_2dj_crop']=open_2dj_crop
+
+            # Modify camera intrinsics
+            scale_matrix = torch.tensor([[scale,0.0,0.0],[0.0,scale,0.0],[0.0,0.0,1.0]])
+            trans1 = crop_center[0] * scale - self.inp_res1 // 2
+            trans2 = crop_center[1] * scale - self.inp_res1 // 2
+            trans_matrix = torch.tensor([[1.0,0.0,-trans1],[0.0,1.0,-trans2],[0.0,0.0,1.0]])
+            K_crop = torch.mm(trans_matrix, torch.mm(scale_matrix, Ks))
+            #
+            sample['scale_matrix'] = scale_matrix
+            sample['trans_matrix'] = trans_matrix
+            if 'trans_Ks' in query:
+                sample['K_crop'] = K_crop
+
+        if self.dat_name == 'HO3D0':
+            # raw image 
+            image = self.pose_dataset.get_img(idx)#[3,480,640]
+            sample['images']=func_transforms.to_tensor(image).float()#image
+            if 'open_2dj' in query or "trans_open_2dj" in query:
+                open_2dj = self.pose_dataset.get_open_2dj(idx)
+                sample['open_2dj']=open_2dj
+                open_2dj_con = self.pose_dataset.get_open_2dj_con(idx)
+                sample['open_2dj_con']=open_2dj_con
+            meta = self.pose_dataset.get_meta(idx)
+            if 'camMat' in meta.keys():
+                Ks = torch.from_numpy(meta['camMat']).float()
+                Ks = torch.mm(Ks,self.pose_dataset.cam_extr)#check merge cam extr to cam intr
+                sample['camMat'] = Ks
+            
+            if 'handBoundingBox' in meta.keys():#for evaluation set
+                uv21 = torch.tensor([[meta['handBoundingBox'][0],meta['handBoundingBox'][1]],[meta['handBoundingBox'][2],meta['handBoundingBox'][3]]])
+            else:
+                if 'handJoints3D' in meta.keys():
+                    j3d = torch.from_numpy(meta['handJoints3D']).float()
+                    uv21 = proj_func(j3d.unsqueeze(0), Ks.unsqueeze(0))
+                    sample['j3d_raw'] = j3d
+                # make coords relative to root joint
+                
+            uv21 = uv21.squeeze(0)
+            sample['uv21'] = uv21
+            
+            #resize_img = func_transforms.resize(resize_image,[224,224])
+            #resize_img = nn.functional.interpolate(resize_image,size=(224,224))
+
+            uv_h = uv21[:,1]
+            uv_w = uv21[:,0]
+            uv_hw = torch.stack([uv_w,uv_h],1)
+            min_uv = torch.max(torch.min(uv_hw,0)[0],torch.zeros(2)) - torch.tensor([40.0,40.0])
+            #max_uv = torch.min(torch.max(uv_hw,0)[0],torch.ones(2)*self.inp_res)
+            max_uv = torch.min(torch.max(uv_hw,0)[0],torch.tensor([640.0,480.0])) + torch.tensor([40.0,40.0])
+            sample['min_uv'] = min_uv
+            sample['max_uv'] = max_uv
+            crop_center = torch.tensor([320.0,240.0])
+            crop_size_best = torch.max(max_uv-crop_center,crop_center-min_uv)
+            crop_size_best = torch.max(crop_size_best)*2
+            crop_size_best = torch.max(crop_size_best,torch.tensor(240.0))
+            sample['crop_size_best'] = crop_size_best
+            scale = self.inp_res1 / crop_size_best
+
+            y1 = crop_center[1] - crop_size_best//2
+            #y2 = y1 + crop_size_best
+            #x1 = crop_center[1] - crop_size_scales//2
+            x1 = crop_center[0] - crop_size_best//2
+            #x2 = x1 + crop_size_best
+            if self.train:
+                rot = np.random.uniform(low=-self.max_rot, high=self.max_rot)
+            else:
+                rot = 0
+            rot_mat = np.array(
+                [
+                    [np.cos(rot), -np.sin(rot), 0],
+                    [np.sin(rot), np.cos(rot), 0],
+                    [0, 0, 1],
+                ]
+            ).astype(np.float32)
+            affinetrans, post_rot_trans = handutils.get_affine_transform(
+                np.asarray([112, 112]), 224, [224, 224], rot=rot
+            )
+            sample['rot'] = rot
+            img_crop = func_transforms.resized_crop(image, y1.data.item(), x1.data.item(), crop_size_best.data.item(), crop_size_best.data.item(), [self.inp_res1,self.inp_res1])
+            # rotation
+            img_crop = handutils.transform_img(
+                img_crop, affinetrans, [224, 224]
+            )
+            if 'trans_images' in query:
+                sample['img_crop'] = func_transforms.to_tensor(img_crop).float()
+            
+            # Modify uv21
+            uv21_u = (uv21[:,0] - crop_center[0]) * scale + self.inp_res1 // 2
+            uv21_v = (uv21[:,1] - crop_center[1]) * scale + self.inp_res1 // 2
+            uv21_crop = torch.stack([uv21_u,uv21_v],1)
+            # rotation
+            uv21_crop = handutils.transform_coords(uv21_crop.numpy(),affinetrans)
+            if 'trans_joints2d' in query:
+                sample['uv21_crop'] = uv21_crop
+
+            if 'open_2dj' in query or "trans_open_2dj" in query:
+                open_2dj_u = (open_2dj[:,0] - crop_center[0]) * scale + self.inp_res1 // 2
+                open_2dj_v = (open_2dj[:,1] - crop_center[1]) * scale + self.inp_res1 // 2
+                open_2dj_crop = torch.stack([open_2dj_u,open_2dj_v],1)
+                # rotation
+                open_2dj_crop = handutils.transform_coords(open_2dj_crop.numpy(),affinetrans)
+                sample['open_2dj_crop']=open_2dj_crop
+            
+            # Modify xyz
+            if 'handJoints3D' in meta.keys() and "joints" in query:
+                j3d = meta['handJoints3D']
+
+                '''
+                trans_j3d = rot_mat.dot(
+                    j3d.transpose(1, 0)
+                ).transpose()
+                sample['xyz21'] = torch.from_numpy(trans_j3d).float()
+                '''
+                # for ho3d since coordinate changed
+                rot0 = -rot
+                rot_mat1 = np.array(
+                    [
+                        [np.cos(rot0), -np.sin(rot0), 0],
+                        [np.sin(rot0), np.cos(rot0), 0],
+                        [0, 0, 1],
+                    ]
+                ).astype(np.float32)
+
+                trans_j3d0 = rot_mat1.dot(
+                    j3d.transpose(1, 0)
+                ).transpose()
+                #sample['rot_mat1'] = rot_mat1
+                sample['xyz21'] = torch.from_numpy(trans_j3d0).float()
+
+            # Modify camera intrinsics
+            matrix = torch.tensor([[scale,1.0,self.inp_res1/640],[1.0,scale,self.inp_res1/480],[1.0,1.0,1.0]])
+            #matrix = torch.tensor([[scale,1.0,0.0],[1.0,scale,0.0],[1.0,1.0,1.0]])
+            #trans_matrix = torch.tensor([[0.0,0.0,-self.inp_res1/2],[0.0,0.0,-self.inp_res1/2],[0.0,0.0,0.0]])
+            K_crop = torch.mul(matrix, Ks)#+trans_matrix
+            if 'trans_Ks' in query:
+                sample['K_crop'] = K_crop
+            '''
+            scale_matrix = torch.tensor([[scale,0.0,0.0],[0.0,scale,0.0],[0.0,0.0,1.0]])
+            trans1 = crop_center[0] * scale - self.inp_res1 // 2
+            trans2 = crop_center[1] * scale - self.inp_res1 // 2
+            trans_matrix = torch.tensor([[1.0,0.0,-trans1],[0.0,1.0,-trans2],[0.0,0.0,1.0]])
+            K_crop = torch.mm(trans_matrix, torch.mm(scale_matrix, Ks))
+            #
+            sample['scale_matrix'] = scale_matrix
+            sample['trans_matrix'] = trans_matrix
+            if 'trans_Ks' in query:
+                sample['K_crop'] = K_crop
+            '''
+            
+            '''
+            # Only padding and resize
+            # image resize
+            m = nn.ZeroPad2d((0,0,80,80))
+            resize_image = m(sample['images'])
+            if 'trans_images' in query:
+                sample['img_crop'] = resize_image#func_transforms.to_tensor(img_crop).float()
+            scale = self.inp_res1 / 640
+            
+            if 'trans_joints2d' in query:
+                uv21_u = uv21[:,0] * scale
+                uv21_v = (uv21[:,1] + 80) * scale
+                uv21_crop = torch.stack([uv21_u,uv21_v],1)
+                sample['uv21_crop'] = uv21_crop
+            if 'open_2dj' in query:
+                open_2dj_u = (open_2dj[:,0]) * scale
+                open_2dj_v = (open_2dj[:,1] + 80) * scale
+                open_2dj_crop = torch.stack([open_2dj_u,open_2dj_v],1)
+                sample['open_2dj_crop']=open_2dj_crop
+            # Modify camera intrinsics
+            matrix = torch.tensor([[scale,1.0,scale],[1.0,scale,self.inp_res1/480],[1.0,1.0,1.0]])
+            K_crop = torch.mul(matrix, Ks)
+            if 'trans_Ks' in query:
+                sample['K_crop'] = K_crop
+            '''
+    
         # Dart
         if self.dat_name == 'Dart':          
             dart_sample = self.pose_dataset.__getitem__(idx)
@@ -1564,3 +1923,134 @@ class RHD:
     
     def __len__(self):
         return len(self.image_names)
+
+class HO3D:
+    def __init__(
+        self,
+        set_name=None,
+        base_path=None,
+        split = 'train',
+    ):
+        self.set_name = set_name
+        self.base_path = base_path
+        self.load_dataset()
+        self.name = "HO3D"
+        self.split = split
+        self.cam_extr = torch.tensor([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).float()
+    
+    # Annotations
+    def load_dataset(self):
+        
+        #self.K_list = json_load(os.path.join(self.base_path, '%s_K.json' % self.set_name))
+        #self.scale_list = json_load(os.path.join(self.base_path, '%s_scale.json' % self.set_name))
+        #import pdb; pdb.set_trace()
+        
+        if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':
+            training_file = open(os.path.join(self.base_path,'train.txt'),"r") 
+            training_list = training_file.readlines()#66034
+            if self.set_name == 'trainval_train':
+                training_list = training_list[:63000]
+            elif self.set_name == 'trainval_val':
+                training_list = training_list[63000:]
+            
+            self.image_list = [i.strip().split('/') for i in training_list]
+            self.subfolder = "train"
+            # read openpose
+            seq_list = os.listdir(os.path.join(self.base_path,'train'))
+            self.open_2dj_list={}
+            for seq_item in seq_list:
+                open_2dj_list = json_load(os.path.join(self.base_path,'openpose',seq_item,'detect.json'))
+                self.open_2dj_list[seq_item] = open_2dj_list
+            #import pdb; pdb.set_trace()
+            for_one_sub = False
+            if for_one_sub:
+                sub_id = 0
+                new_image_list = []
+                for image_l in self.image_list:
+                    if image_l[0] == seq_list[sub_id]:
+                        new_image_list.append(image_l)
+                #import pdb; pdb.set_trace()
+                print(seq_list[sub_id])
+                self.image_list = new_image_list
+
+        elif self.set_name == 'evaluation':
+            evaluation_file = open(os.path.join(self.base_path,'evaluation.txt'),"r") 
+            evaluation_list = evaluation_file.readlines()#11524
+            self.image_list = [i.strip().split('/') for i in evaluation_list]
+            self.subfolder = "evaluation"
+            # read openpose
+            # '''
+            seq_list = os.listdir(os.path.join(self.base_path,'evaluation'))
+            self.open_2dj_list={}
+            for seq_item in seq_list:
+                open_2dj_list = json_load(os.path.join(self.base_path,'openpose',seq_item,'detect.json'))
+                self.open_2dj_list[seq_item] = open_2dj_list
+            # '''
+            
+        #self.cam_intr = np.array([[617.343, 0.0, 312.42], [0.0, 617.343, 241.42], [0.0, 0.0, 1.0]]).astype(np.float32)
+        #self.cam_extr = np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        
+        #import pdb;pdb.set_trace()
+
+    def get_img(self, idx):
+        [seq_name, image_name] = self.image_list[idx]
+        image_path = os.path.join(self.base_path, self.subfolder, seq_name, 'rgb', '{}.png'.format(image_name))
+        img = Image.open(image_path).convert('RGB')
+        #img = func_transforms.resize(img,64)
+        #img = func_transforms.to_tensor(img).float()#[3,480,640]
+        return img
+
+    
+    def get_masks(self, idx):
+        [seq_name, image_name] = self.image_list[idx]
+        mask_path = os.path.join(self.base_path, self.subfolder, seq_name, 'seg', '{}.jpg'.format(image_name))
+        mask = Image.open(mask_path)
+        mask = func_transforms.resize(mask,(480,640))
+        #img = func_transforms.resize(img,64)
+        #mask = func_transforms.to_tensor(mask)#[3,120,160] 0~1
+        #mask = torch.round(mask)
+        return mask
+    
+
+    def get_depth(self, idx):
+        [seq_name, image_name] = self.image_list[idx]
+        depth_path = os.path.join(self.base_path, self.subfolder, seq_name, 'depth', '{}.png'.format(image_name))
+        depth = Image.open(depth_path)
+        #depth = func_transforms.to_tensor(depth)#[3,480,640] 0~1
+        '''
+        depth_scale = 0.00012498664727900177
+        depth_img = cv2.imread(depth_path)
+        dpt = depth_img[:, :, 2] + depth_img[:, :, 1] * 256
+        dpt = dpt * depth_scale
+        #[480,640]
+        return dpt
+        '''
+        return depth
+    
+    def get_meta(self, idx):
+        [seq_name, image_name] = self.image_list[idx]
+        meta_path = os.path.join(self.base_path, self.subfolder, seq_name, 'meta', '{}.pkl'.format(image_name))
+        #meta = pickle.load(meta_path)
+        meta = pickle_load(meta_path)
+        # meta.keys() dict_keys(['objTrans', 'handBeta', 'camMat', 'handJoints3D', 'handTrans', 'camIDList', 'handPose', 'objCorners3DRest', 'objRot', 'objName', 'objCorners3D', 'objLabel'])
+        
+        # evaluation
+        # dict_keys(['camIDList', 'objTrans', 'objCorners3DRest', 'objLabel', 'handBoundingBox', 'objCorners3D', 'objName', 'camMat', 'handJoints3D', 'objRot'])
+        
+        return meta
+    
+    def get_open_2dj(self, idx):
+        #self.open_2dj = json_load('/data/HO3D/train/SS1/openpose/detect.json')
+        [seq_name, image_name] = self.image_list[idx]
+        open_2dj = self.open_2dj_list[seq_name][0][int(image_name)]
+        open_2dj = torch.FloatTensor(open_2dj)
+        return open_2dj
+
+    def get_open_2dj_con(self, idx):
+        [seq_name, image_name] = self.image_list[idx]
+        open_2dj_con = self.open_2dj_list[seq_name][1][int(image_name)]
+        open_2dj_con = torch.FloatTensor(open_2dj_con)
+        return open_2dj_con
+
+    def __len__(self):
+        return len(self.image_list)    

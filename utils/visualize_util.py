@@ -31,7 +31,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}{}.png'.format(epoch, idx, evalName))
     # list of all used figs
-    fig_names = ['ori_img', 'j2d_gt', 'nimble_j2d', 'mano_j2d', 'j3d', 
+    fig_names = ['ori_img', 'j2d_gt', 'open_2dj', 'nimble_j2d', 'mano_j2d', 'j3d', 
             'nimble_j3d', 'mano_j3d', 'mask_gt', 'mask_rgb', 'render_sil', 
             'render_into_ori', 'render_img', ]
     fig_3d = ['j3d', 'nimble_j3d', 'mano_j3d']
@@ -66,8 +66,15 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
                 uv = j2d_gt[0].detach().cpu().numpy()
                 # plot_hand(ax, uv, order='uv', dataset_name=dataset_name)
                 plot_hand(ax, uv, order='uv', dataset_name='FreiHand')
+        elif fig_name == 'open_2dj':
+            ax.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
+            ax.set_title("Open 2D Joints", fontsize=ax_font_size)
+            ax.axis('off')
+            if open_2dj is not None:
+                uv = open_2dj[0].detach().cpu().numpy()
+                # plot_hand(ax, uv, order='uv', dataset_name=dataset_name)
+                plot_hand(ax, uv, order='uv', dataset_name='FreiHand')
         elif fig_name == 'nimble_j2d':
-
             ax.imshow(imgs[0].cpu().permute(1, 2, 0).numpy())
             if nimble_j2d is not None:
                 uv_out = nimble_j2d[0].detach().cpu().numpy()
@@ -104,6 +111,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             # 43 & 44 Output 3d nimble joints
             if nimble_joints is not None:
                 j3d_out = nimble_joints[0].detach().cpu().numpy()
+                print('nimble j3d_out: ', j3d_out)
                 plot_hand_3d(ax, j3d_out, order='xyz', dataset_name='nimble')
                 if lims is not None:
                     ax.set_xlim(lims[0],lims[1])
@@ -114,6 +122,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             # 32 & 34 Output 3d joints
             if joints is not None:
                 j3d_out = joints[0].detach().cpu().numpy()
+                print('mano j3d_out: ', j3d_out)
                 plot_hand_3d(ax, j3d_out, order='xyz')
                 if lims is not None:
                     ax.set_xlim(lims[0],lims[1])
