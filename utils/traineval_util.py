@@ -152,6 +152,7 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             texture_con = torch.mean(open_2dj_con.squeeze(),1)
             example_torch['open_2dj_con'] = open_2dj_con
             example_torch['texture_con'] = texture_con
+        
     elif dat_name == 'HO3D':
         example_torch['imgs'] = torch_f.interpolate(data_batch['img_crop'],(224,224)).cuda()#[b,3,640,640] --> [b,3,224,224]
         Ks = data_batch['K_crop'].cuda()#[b,3,3]
@@ -161,6 +162,8 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
         Is = torch.unsqueeze(I,0).repeat(Ks.shape[0],1,1).cuda()
         example_torch['Ps'] = torch.bmm(Ks, Is)#.cuda()
         example_torch['Ks'] = Ks
+        if 'root_xyz' in data_batch.keys():
+            example_torch['root_xyz'] = data_batch['root_xyz'].cuda()
         if 'uv21_crop' in data_batch.keys():
             j2d_gt = data_batch['uv21_crop'].float().cuda()
             j2d_gt = HO3D2Frei(j2d_gt)
@@ -188,6 +191,13 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             texture_con = torch.mean(open_2dj_con.squeeze(),1)
             example_torch['open_2dj_con'] = open_2dj_con
             example_torch['texture_con'] = texture_con
+        
+        if 'hand_mask_crop' in data_batch.keys():
+            masks = data_batch['hand_mask_crop'].cuda()#[b,3,224,224]
+            example_torch['masks'] = masks
+            #maskRGBs = data_batch['maskRGBs'].cuda()#[b,3,224,224]
+            segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
+            example_torch['segms_gt'] = segms_gt
 
     elif dat_name == 'RHD':
         '''
@@ -288,8 +298,6 @@ def orthographic_proj_withz(X, trans, scale, offset_z=0.):
     proj_xy = proj[:, :, :2] + trans
     proj_z = proj[:, :, 2, None] + offset_z
     return torch.cat((proj_xy, proj_z), 2)
-
-
 
 def trans_proj(outputs, Ks_this, dat_name, is_ortho=False):
     if dat_name == 'FreiHand':

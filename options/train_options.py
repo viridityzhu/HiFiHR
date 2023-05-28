@@ -102,7 +102,7 @@ def get_parser():
     parser.add_argument('--sigma_val', type=float, default=1e-6)#1e-4
     parser.add_argument('--lambda_laplacian', type=float, default=0.1)#5e-3
     parser.add_argument('--lambda_flatten', type=float, default=5e-4)
-    parser.add_argument('--lambda_texture', type=float, default=0.005)#1 0.01
+    parser.add_argument('--lambda_texture', type=float, default=0.003)#1 0.01
     parser.add_argument('--lambda_silhouette', type=float, default=0.005)#0.1
     parser.add_argument('--lambda_mask', type=float, default=1)#1
     parser.add_argument('--lambda_j2d', type=float, default=1e-3)#0.001
@@ -117,7 +117,7 @@ def get_parser():
     parser.add_argument('--lambda_shape_list', type=list, default=[0.00001])#0.001
     parser.add_argument('--lambda_shape_steps', type=list, default=[])#0.001
     # parser.add_argument('--lambda_pose', type=float, default=1e-1)#0.001
-    parser.add_argument('--lambda_pose_list', type=list, default=[0.00001])#0.001
+    parser.add_argument('--lambda_pose_list', type=list, default=[0.0001])#0.001
     parser.add_argument('--lambda_pose_steps', type=list, default=[])#0.001
     # parser.add_argument('--lambda_tex_reg', type=float, default=5e-3)# std: 1e-4
     parser.add_argument('--lambda_tex_reg_list', type=list, default=[0.00001])#0.001
