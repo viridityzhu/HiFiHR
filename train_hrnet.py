@@ -58,6 +58,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             root_xyz = examples['root_xyz'].unsqueeze(1)
         else:
             root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 16e6ea2df8e3386d630b112bb343202acb6f1b2a
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
@@ -147,6 +151,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         # Save visualization and print information
         batch_time.update(time.time() - end)
+        
         visualize(mode_train, dat_name, epoch, idx, outputs, examples, args, writer=writer, writer_tag=set_name, console=console)
         # Print information
         if idx % args.print_freq == 0:
