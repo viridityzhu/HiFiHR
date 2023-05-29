@@ -59,7 +59,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         
         # root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
-        outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
+        outputs = model(dat_name, mode_train, examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
         # ** positions are relative to middle root.
         if set_name != 'evaluation' and dat_name != 'HO3D':
@@ -148,8 +148,8 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # compute texture metric
         if not mode_train and args.render:
             if dat_name == 'HO3D':
-                maskRGBs = examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
-                mask_re_img = outputs['re_img'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
+                maskRGBs = examples['imgs'].mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
+                mask_re_img = outputs['re_img'].mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
             else:
                 maskRGBs = examples['segms_gt'].unsqueeze(1) * examples['imgs'] #examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
                 mask_re_img = outputs['re_img'] * examples['segms_gt'].unsqueeze(1) # (outputs['re_sil']/255.0).repeat(1,3,1,1)

@@ -1080,6 +1080,8 @@ class HandDataset(Dataset):
                 
                 # add
                 sample['root_xyz'] = j3d
+                sample['root_xyz'][2]= -sample['root_xyz'][2]
+                sample['root_xyz'][1]= -sample['root_xyz'][1]
                 
                 if 'xyz21_normed' in query:
                     joint_root = j3d[0,:]
