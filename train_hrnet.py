@@ -22,7 +22,7 @@ from data.dataset import get_dataset
 from utils.train_utils import *
 from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei, ortho_project
-from utils.fh_utils import AverageMeter,EvalUtil
+from utils.fh_utils import AverageMeter,EvalUtil, Frei2HO3D
 
 torch.cuda.set_device(3)
 os.environ['CUDA_VISIBLE_DEVICES'] ='3'
@@ -58,10 +58,6 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             root_xyz = examples['root_xyz'].unsqueeze(1)
         else:
             root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
-<<<<<<< HEAD
-=======
-
->>>>>>> 16e6ea2df8e3386d630b112bb343202acb6f1b2a
         # Use the network to predict the outputs
         outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
@@ -118,10 +114,21 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # ================================
         # save 3D pred joints
         if args.save_3d or not mode_train: # only save the pred results for evaluation
-            xyz_preds = outputs['joints'].cpu().detach().numpy()
-            xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
-            for i in xyz_preds:
-                xyz_pred_list.append(i.squeeze())
+            # xyz_preds = outputs['joints'].cpu().detach().numpy()
+            # xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
+            # for i in xyz_preds:
+            #     xyz_pred_list.append(i.squeeze())
+            
+            for i in range(outputs['joints'].shape[0]):
+                #import pdb; pdb.set_trace()
+                if dat_name == "FreiHand":
+                    xyz_pred_list.append(outputs['joints'][i].cpu().detach().numpy())
+                elif dat_name == "HO3D":
+                    output_joints_ho3d = Frei2HO3D(outputs['joints'])
+                    #import pdb; pdb.set_trace()
+                    output_joints_ho3d = output_joints_ho3d.mul(torch.tensor([1,-1,-1]).view(1,1,-1).float().cuda())
+                    xyz_pred_list.append(output_joints_ho3d[i].cpu().detach().numpy())    
+            
             vert_preds = outputs['mano_verts'].cpu().detach().numpy()
             vert_preds = np.split(vert_preds, vert_preds.shape[0])
             for i in vert_preds:
