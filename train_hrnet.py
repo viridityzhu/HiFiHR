@@ -121,13 +121,6 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             # xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
             # for i in xyz_preds:
             #     xyz_pred_list.append(i.squeeze())
-            # vert_preds = outputs['mano_verts'].cpu().detach().numpy()
-            # vert_preds = np.split(vert_preds, vert_preds.shape[0])
-            # for i in vert_preds:
-            #     verts_pred_list.append(i.squeeze())
-            # j3d_ED_list, j2d_ED_list = save_3d(examples, outputs) # Euclidean distances between each joint-pair
-            # log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging)
-            # del j3d_ED_list, j2d_ED_list 
             for i in range(outputs['joints'].shape[0]):
                 #import pdb; pdb.set_trace()
                 if dat_name == "FreiHand":
@@ -137,6 +130,13 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                     #import pdb; pdb.set_trace()
                     output_joints_ho3d = output_joints_ho3d.mul(torch.tensor([1,-1,-1]).view(1,1,-1).float().cuda())
                     xyz_pred_list.append(output_joints_ho3d[i].cpu().detach().numpy()) 
+            vert_preds = outputs['mano_verts'].cpu().detach().numpy()
+            vert_preds = np.split(vert_preds, vert_preds.shape[0])
+            for i in vert_preds:
+                verts_pred_list.append(i.squeeze())
+            # j3d_ED_list, j2d_ED_list = save_3d(examples, outputs) # Euclidean distances between each joint-pair
+            # log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging)
+            # del j3d_ED_list, j2d_ED_list 
         # save 2D results
         if args.save_2d:
             # square errors?
