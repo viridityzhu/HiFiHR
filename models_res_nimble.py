@@ -104,7 +104,7 @@ class Model(nn.Module):
             self.light_estimator = LightEstimator(self.low_feat_dim)
 
 
-    def forward(self, images, Ks=None, root_xyz=None):
+    def forward(self, dat_name, mode_train, images, Ks=None, root_xyz=None):
         if self.hand_model == 'mano_new':
             pred = self.ytbHand(images)
             outputs = {
@@ -163,11 +163,18 @@ class Model(nn.Module):
         
 
         # ** offset positions relative to root.
-        pred_root_xyz = outputs['joints'][:, self.root_id, :].unsqueeze(1)
+        if dat_name == 'HO3D' and not mode_train:
+            # they only provide wrist joint (0) in test set
+            pred_root_xyz = outputs['joints'][:, 0, :].unsqueeze(1)
+        else:
+            pred_root_xyz = outputs['joints'][:, self.root_id, :].unsqueeze(1)
         outputs['joints'] = outputs['joints'] - pred_root_xyz
         outputs['mano_verts'] = outputs['mano_verts'] - pred_root_xyz
         if self.hand_model == 'nimble':
-            pred_root_xyz = outputs['nimble_joints'][:, self.root_id_nimble, :].unsqueeze(1)
+            if dat_name == 'HO3D' and not mode_train:
+                pred_root_xyz = outputs['nimble_joints'][:, 0, :].unsqueeze(1)
+            else:
+                pred_root_xyz = outputs['nimble_joints'][:, self.root_id_nimble, :].unsqueeze(1)
             outputs['nimble_joints'] = outputs['nimble_joints'] - pred_root_xyz
 
 
@@ -196,13 +203,15 @@ class Model(nn.Module):
                     device=device,
                 )
 
-
             # move to the root relative coord. 
             # verts = verts - pred_root_xyz + root_xyz
             verts_num = outputs['skin_meshes']._num_verts_per_mesh[0]
             outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
             outputs['skin_meshes'].offset_verts_(root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
             
+            outputs['render'] = self.renderer_p3d
+            outputs['lighting'] = lighting
+            outputs['cameras'] = cameras
             
             # render the image
             rendered_images = self.renderer_p3d(outputs['skin_meshes'], cameras=cameras, lights=lighting)

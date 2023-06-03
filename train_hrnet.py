@@ -24,8 +24,8 @@ from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei, ortho_project
 from utils.fh_utils import AverageMeter,EvalUtil, Frei2HO3D
 
-torch.cuda.set_device(3)
-os.environ['CUDA_VISIBLE_DEVICES'] ='3'
+torch.cuda.set_device(1)
+os.environ['CUDA_VISIBLE_DEVICES'] ='1'
 
 console = Console()
 test_log = {}
@@ -59,7 +59,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         else:
             root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
-        outputs = model(examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
+        outputs = model(dat_name, mode_train, examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
         # ** positions are relative to middle root.
         if set_name != 'evaluation' and dat_name != 'HO3D':
@@ -114,18 +114,12 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # ================================
         # save 3D pred joints
         if args.save_3d or not mode_train: # only save the pred results for evaluation
-            # xyz_preds = outputs['joints'].cpu().detach().numpy()
-            # xyz_preds = np.split(xyz_preds, xyz_preds.shape[0])
-            # for i in xyz_preds:
-            #     xyz_pred_list.append(i.squeeze())
-            
             for i in range(outputs['joints'].shape[0]):
-                #import pdb; pdb.set_trace()
                 if dat_name == "FreiHand":
                     xyz_pred_list.append(outputs['joints'][i].cpu().detach().numpy())
                 elif dat_name == "HO3D":
+                    # change Frei joint to HO3D joint for evaluation
                     output_joints_ho3d = Frei2HO3D(outputs['joints'])
-                    #import pdb; pdb.set_trace()
                     output_joints_ho3d = output_joints_ho3d.mul(torch.tensor([1,-1,-1]).view(1,1,-1).float().cuda())
                     xyz_pred_list.append(output_joints_ho3d[i].cpu().detach().numpy())    
             
@@ -146,8 +140,12 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         # compute texture metric
         if not mode_train and args.render:
-            maskRGBs = examples['segms_gt'].unsqueeze(1) * examples['imgs'] #examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
-            mask_re_img = outputs['re_img'] * examples['segms_gt'].unsqueeze(1) # (outputs['re_sil']/255.0).repeat(1,3,1,1)
+            if dat_name == 'HO3D':
+                maskRGBs = examples['imgs'].mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
+                mask_re_img = outputs['re_img'].mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
+            else:
+                maskRGBs = examples['segms_gt'].unsqueeze(1) * examples['imgs'] #examples['imgs'].mul((outputs['re_sil']>0).float().unsqueeze(1).repeat(1,3,1,1))
+                mask_re_img = outputs['re_img'] * examples['segms_gt'].unsqueeze(1) # (outputs['re_sil']/255.0).repeat(1,3,1,1)
             psnr = -10 * loss_func.MSE_loss(mask_re_img, maskRGBs).log10().item()
             ssim = pytorch_ssim.ssim(mask_re_img, maskRGBs).item()
             lpips = lpips_loss(mask_re_img * 2 - 1, maskRGBs * 2 - 1).mean().item()
@@ -288,6 +286,22 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
                 # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
+                
+                if args.render:
+                    psnr = np.mean([r['psnr'] for r in texture_metric_list])
+                    ssim = np.mean([r['ssim'] for r in texture_metric_list])
+                    lpips = np.mean([r['lpips'] for r in texture_metric_list])
+                    l1 = np.mean([r['l1'] for r in texture_metric_list])
+                    l2 = np.mean([r['l2'] for r in texture_metric_list])
+                    console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
+
+                    if writer is not None:
+                        with torch.no_grad():
+                            writer.add_scalar('eval/psnr', psnr, epoch)
+                            writer.add_scalar('eval/ssim', ssim, epoch)
+                            writer.add_scalar('eval/lpips', lpips, epoch)
+                            writer.add_scalar('eval/l1', l1, epoch)
+                            writer.add_scalar('eval/l2', l2, epoch)
 
 
 def train(base_path, set_name=None, writer = None, optimizer = None, scheduler = None):
@@ -489,7 +503,7 @@ if __name__ == '__main__':
                 setattr(args, parse_key, parse_value)
     
     args = train_options.make_output_dir(args)
-    args.device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     args.ROOT = 9
     args.ROOT_NIMBLE = 11
     args.lambda_pose = args.lambda_pose_list[0]
@@ -536,7 +550,7 @@ if __name__ == '__main__':
     if args.force_init_lr > 0: # default is -1, means not using this
         optimizer.param_groups[0]['lr'] = args.force_init_lr
 
-    model = nn.DataParallel(model.to(args.device), device_ids=[3])
+    model = nn.DataParallel(model.to(args.device), device_ids=[1])
 
     loss_func = LossFunction()
     lpips_loss = lpips.LPIPS(net="alex").to(args.device)

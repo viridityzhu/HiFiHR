@@ -1077,6 +1077,8 @@ class HandDataset(Dataset):
                 
                 # add
                 sample['root_xyz'] = j3d
+                sample['root_xyz'][2]= -sample['root_xyz'][2]
+                sample['root_xyz'][1]= -sample['root_xyz'][1]
                 
                 if 'xyz21_normed' in query:
                     joint_root = j3d[0,:]
@@ -1157,6 +1159,7 @@ class HandDataset(Dataset):
             sample['x2']=x2
 
             img_crop = func_transforms.resized_crop(image, y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1])
+            
             if 'trans_images' in query:
                 sample['img_crop'] = func_transforms.to_tensor(img_crop).float()
             
