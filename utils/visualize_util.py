@@ -15,6 +15,15 @@ import os
 from utils.fh_utils import *
 from utils.NIMBLE_model.utils import save_textured_nimble
 
+from torchvision.utils import save_image
+
+from pytorch3d.structures.meshes import Meshes
+from pytorch3d.renderer import (
+    look_at_view_transform,
+    PerspectiveCameras,
+    FoVPerspectiveCameras,
+)
+
 def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, nimble_j2d, masks, maskRGBs, render_images,joints,joints_gt, nimble_joints, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', console=None, img_wise_save=False, refhand=None, warphand=None):
     evalName = '_eval' if not mode_train else ''
     if int(idx) == 0:
@@ -148,11 +157,10 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             ax.axis('off')
         elif fig_name == 'render_into_ori':
             if re_img is not None:
-                # re_sil_0 = (re_sil[0] > 0).float().repeat(3, 1, 1)
                 re_img_0 = re_img[0]
-                mask_0 = (re_img_0 == 1).float() # re_img_0 is 1 at the background
+                mask_0 = (torch.logical_and(re_img_0[2] >= 0.6, torch.logical_and(re_img_0[0] >= 0.6, re_img_0[1] >= 0.6))).float() # re_img_0 is 1 at the background
                 render_into_ori = re_img_0 * (1 - mask_0) + imgs[0] * mask_0
-                ax.imshow(render_into_ori.permute(1,2,0).cpu().detach().numpy())
+                ax.imshow(render_into_ori.permute(1,2,0).cpu().detach().numpy())         
             ax.set_title("Rendered into original", fontsize=ax_font_size)
             ax.axis('off')
         elif fig_name == 'render_img':
@@ -691,33 +699,55 @@ def displadic(mode_train, obj_output, image_output, epoch, idx, examples, output
     '''
 
 def multiview_render(image_output, outputs, epoch, idx):
-    #import pdb; pdb.set_trace()
     batch_size = outputs['verts'].shape[0]
     device = outputs['verts'].device
     from utils.hand_3d_model import rodrigues
     from torchvision.utils import save_image
     file_path = os.path.join(image_output, "multiviews")
     os.makedirs(file_path, exist_ok=True)
-    
     for i in range(20):
+        # horizontal render
         rots = torch.tensor([0,np.pi*2/20*i,0]).unsqueeze(0).repeat(batch_size,1).to(device)
         Rots = rodrigues(rots)[0]
-        # new_vertices = torch.matmul(Rots,(outputs['verts']-torch.mul(outputs['joints'][:,9],torch.tensor([0,0,1]).float().to(device)).unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
-        new_vertices = torch.matmul(Rots,outputs['verts'].permute(0,2,1)).permute(0,2,1)
-        #new_vertices = torch.matmul(Rots,(outputs['vertices']-outputs['joints'][:,9].unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
-        #new_vertices = torch.matmul(Rots,(outputs['vertices']-outputs['trans'].unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
-        op_re_img,op_re_depth,op_re_sil = outputs['render'](new_vertices, outputs['faces'], torch.tanh(outputs['face_textures']), mode=None)
-        #op_re_img,op_re_depth,op_re_sil = outputs['render'](outputs['vertices'], outputs['faces'], torch.tanh(outputs['face_textures']), mode=None)
+        
+        root_id = 3140 # mesh root
+        scale = 5
+        
+        new_vertices = outputs['verts']
+        pred_root_xyz = outputs['verts'][:, root_id, :].unsqueeze(1)
+        new_vertices = (new_vertices - pred_root_xyz) * scale # move mesh to origin
+        
+        new_vertices = torch.matmul(Rots,new_vertices.permute(0,2,1)).permute(0,2,1)
+        
+        # upside down x and y
+        new_vertices[:, :, 0] = - new_vertices[:, :, 0]
+        new_vertices[:, :, 1] = - new_vertices[:, :, 1]
+
+        R, T = look_at_view_transform(dist = -0.8)      
+        R = R.to(device)
+        T = T.to(device)
+
+        cameras = PerspectiveCameras(R=R, T=T, device=device)
+        
+        skin_p3dmesh = Meshes(new_vertices, outputs['faces'], outputs['texture'])
+        op_re_img = outputs['render'](skin_p3dmesh, cameras=cameras, lights=outputs['lighting'], znear=-2.0, zfar=1000.0)
+        
+        op_re_img = op_re_img.permute(0, 3, 1, 2)  # NHWC -> NCHW
+        op_re_img = F.avg_pool2d(op_re_img, kernel_size=3, stride=3)
+        op_re_img = op_re_img[:, :3, :, :] # the last dim is alpha
+        
         file_str = os.path.join(file_path, '{:04d}_{:07d}_h_{}.png'.format(epoch, idx,i))
-        save_image(op_re_img[0], file_str)
-        rots = torch.tensor([np.pi*2/20*i,0,0]).unsqueeze(0).repeat(batch_size,1).to(device)
-        Rots = rodrigues(rots)[0]
-        new_vertices = torch.matmul(Rots,(outputs['verts']-torch.mul(outputs['joints'][:,9],torch.tensor([0,0,1]).float().to(device)).unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
-        op_re_img,op_re_depth,op_re_sil = outputs['render'](new_vertices, outputs['faces'], torch.tanh(outputs['face_textures']), mode=None)
-        file_str = os.path.join(file_path, '{:04d}_{:07d}_v_{}.png'.format(epoch, idx,i))
-        save_image(op_re_img[0], file_str)
-    
-    
+        save_image(op_re_img, file_str)
+
+        # vertical render
+        # rots = torch.tensor([np.pi*2/20*i,0,0]).unsqueeze(0).repeat(batch_size,1).to(device)
+        # Rots = rodrigues(rots)[0]
+        # # new_vertices = torch.matmul(Rots,(outputs['verts']-torch.mul(outputs['joints'][:,9],torch.tensor([0,0,1]).float().to(device)).unsqueeze(1)).permute(0,2,1)).permute(0,2,1) + outputs['trans'].unsqueeze(1)
+        # new_vertices = torch.matmul(Rots,new_vertices.permute(0,2,1)).permute(0,2,1)
+        # op_re_img = outputs['render'](skin_p3dmesh, cameras=cameras, lights=outputs['lighting'])
+        # # op_re_img,op_re_depth,op_re_sil = outputs['render'](new_vertices, outputs['faces'], torch.tanh(outputs['face_textures']), mode=None)
+        # file_str = os.path.join(file_path, '{:04d}_{:07d}_v_{}.png'.format(epoch, idx,i))
+        # save_image(op_re_img[0], file_str)
 
     '''
     for i in range(20):
