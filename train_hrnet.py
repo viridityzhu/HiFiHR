@@ -58,6 +58,8 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             root_xyz = examples['root_xyz'].unsqueeze(1)
         else:
             root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
+        
+        # root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
         outputs = model(dat_name, mode_train, examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
 
@@ -80,9 +82,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         else:
             # Projection transformation, project joints to 2D
             if 'joints' in outputs:
-                j2d = trans_proj_j2d(outputs, examples['Ks'], root_xyz=root_xyz)
+                j2d = trans_proj_j2d(outputs, examples['Ks'], root_xyz=root_xyz) # do not need scale
                 outputs.update({'j2d': j2d})
                 if args.hand_model == 'nimble':
+                    # nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], examples['scales'], root_xyz=root_xyz, which_joints='nimble_joints')
                     nimble_j2d = trans_proj_j2d(outputs, examples['Ks'], root_xyz=root_xyz, which_joints='nimble_joints')
                     outputs.update({'nimble_j2d': nimble_j2d})
         
@@ -90,17 +93,19 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         #      Compute and backward loss
         # ===================================
         loss_used = args.losses
-            
-        # Compute loss function
-        loss_dic = loss_func(examples, outputs, loss_used, dat_name, args)
         loss = torch.zeros(1).float().to(args.device)
-        for loss_key in loss_used:
-            # if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
-            loss += loss_dic[loss_key]
-                #print(loss_key,loss_dic[loss_key],loss_dic[loss_key].device)
-        
+
+        if mode_train: # only compute loss for training
+            loss_dic = loss_func(examples, outputs, loss_used, dat_name, args)
+            for loss_key in loss_used:
+                # if loss_dic[loss_key]>0 and (not torch.isnan(loss_dic[loss_key]).sum()):
+                loss += loss_dic[loss_key]
+                    #print(loss_key,loss_dic[loss_key],loss_dic[loss_key].device)
+        else:
+            loss_dic = {}
+            
         loss_dic['loss']=loss
-        if loss < 1e-10:
+        if loss < 1e-10 and len(loss_dic.keys())>1:
             print('loss is less than 1e-10')
             continue
         
@@ -279,29 +284,29 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             #          Evaluation
             # ================================
             pred_out_path = os.path.join(args.pred_output,'test',str(epoch))
-            if epoch%args.save_interval==0 and epoch>0:
-                os.makedirs(pred_out_path, exist_ok=True)
-                pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
-                # HO3D dump evaluation result for online evaluation
-                dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
-                # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
-                # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
-                
-                if args.render:
-                    psnr = np.mean([r['psnr'] for r in texture_metric_list])
-                    ssim = np.mean([r['ssim'] for r in texture_metric_list])
-                    lpips = np.mean([r['lpips'] for r in texture_metric_list])
-                    l1 = np.mean([r['l1'] for r in texture_metric_list])
-                    l2 = np.mean([r['l2'] for r in texture_metric_list])
-                    console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
+            # if epoch%args.save_interval==0 and epoch>0:
+            os.makedirs(pred_out_path, exist_ok=True)
+            pred_out_path_0 = os.path.join(pred_out_path,'pred.json')
+            # HO3D dump evaluation result for online evaluation
+            dump(pred_out_path_0, xyz_pred_list, verts_pred_list)
+            # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
+            # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
+            # ----- evaluation: texture metrics --------        
+            if args.render:
+                psnr = np.mean([r['psnr'] for r in texture_metric_list])
+                ssim = np.mean([r['ssim'] for r in texture_metric_list])
+                lpips = np.mean([r['lpips'] for r in texture_metric_list])
+                l1 = np.mean([r['l1'] for r in texture_metric_list])
+                l2 = np.mean([r['l2'] for r in texture_metric_list])
+                console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
 
-                    if writer is not None:
-                        with torch.no_grad():
-                            writer.add_scalar('eval/psnr', psnr, epoch)
-                            writer.add_scalar('eval/ssim', ssim, epoch)
-                            writer.add_scalar('eval/lpips', lpips, epoch)
-                            writer.add_scalar('eval/l1', l1, epoch)
-                            writer.add_scalar('eval/l2', l2, epoch)
+                if writer is not None:
+                    with torch.no_grad():
+                        writer.add_scalar('eval/psnr', psnr, epoch)
+                        writer.add_scalar('eval/ssim', ssim, epoch)
+                        writer.add_scalar('eval/lpips', lpips, epoch)
+                        writer.add_scalar('eval/l1', l1, epoch)
+                        writer.add_scalar('eval/l2', l2, epoch)
 
 
 def train(base_path, set_name=None, writer = None, optimizer = None, scheduler = None):
@@ -314,15 +319,15 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
     # ==============================
     with console.status("Preparing dataset...", spinner="bounce"):
         assert set_name is not None, "Mode is not provided. Should be training or evaluation."
+        if args.controlled_exp:
+            # Use subset of datasets so that final dataset size is constant
+            limit_size = int(args.controlled_size / len(args.train_datasets))
+        else:
+            limit_size = None
 
         if 'training' in set_name:
             # initialize train datasets
             train_loaders = []
-            if args.controlled_exp:
-                # Use subset of datasets so that final dataset size is constant
-                limit_size = int(args.controlled_size / len(args.train_datasets))
-            else:
-                limit_size = None
             for dat_name in args.train_datasets:# iteration = min(dataset_len)/batch_size; go each dataset at a batchsize
                 if dat_name == 'FreiHand':
                     if len(args.train_queries_frei)>0:
@@ -406,6 +411,7 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                 base_path,
                 queries = val_queries,
                 train = False,
+                limit_size=limit_size,
                 #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
             )
             print("Validation dataset size: {}".format(len(val_dat)))

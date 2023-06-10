@@ -29,7 +29,10 @@ from utils.fh_utils import proj_func
 import copy
 import imageio
 from pytorch3d.io import load_obj
-from manotorch.manolayer import ManoLayer
+try:
+    from manotorch.manolayer import ManoLayer
+except:
+    print("ManoTorch not installed.")
 from utils.DARTset_utils import (aa_to_rotmat, fit_ortho_param, ortho_project,
                            plot_hand, rotmat_to_aa)
 
@@ -1159,7 +1162,6 @@ class HandDataset(Dataset):
             sample['x2']=x2
 
             img_crop = func_transforms.resized_crop(image, y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1])
-            
             if 'trans_images' in query:
                 sample['img_crop'] = func_transforms.to_tensor(img_crop).float()
             
@@ -1170,7 +1172,7 @@ class HandDataset(Dataset):
                 sample['depth_crop']=func_transforms.to_tensor(depth_crop).float()#[1,320,320]
             
             if 'trans_masks' in query or 'base_masks' in query:
-                hand_mask_crop = func_transforms.resized_crop(mask.getchannel(0), y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1],interpolation=1)
+                hand_mask_crop = func_transforms.resized_crop(mask.getchannel(0), y1.data.item(), x1.data.item(), crop_size_scales.data.item(), crop_size_scales.data.item(), [self.inp_res1,self.inp_res1],interpolation=func_transforms.InterpolationMode.BICUBIC)
                 if 'trans_masks' in query:
                     #hand_mask_crop = ((func_transforms.to_tensor(hand_mask_crop)*255)>0).int()
                     hand_mask_crop = (func_transforms.to_tensor(hand_mask_crop)).round()

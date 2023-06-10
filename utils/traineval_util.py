@@ -192,12 +192,14 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             example_torch['open_2dj_con'] = open_2dj_con
             example_torch['texture_con'] = texture_con
         
+        
         if 'hand_mask_crop' in data_batch.keys():
             masks = data_batch['hand_mask_crop'].cuda()#[b,3,224,224]
             example_torch['masks'] = masks
             #maskRGBs = data_batch['maskRGBs'].cuda()#[b,3,224,224]
             segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
             example_torch['segms_gt'] = segms_gt
+        
 
     elif dat_name == 'RHD':
         '''

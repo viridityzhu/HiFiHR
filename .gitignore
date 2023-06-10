@@ -141,3 +141,7 @@ runs/*
 /img.png
 
 /data/assets/mano_v1_2/models/*.pkl
+config/FreiHAND/fully_superv_freihand_w_texture_2_eval.json
+config/FreiHAND/fully_superv_freihand_w_texture_3_eval.json
+runs_backup/
+data/InterHand2.6M*

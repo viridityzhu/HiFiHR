@@ -327,6 +327,12 @@ class LossFunction():
                 scale_loss = torch_f.mse_loss(cal_scale, examples['scales'].to(device))
                 scale_loss = args.lambda_scale * scale_loss
                 loss_dic['scale'] = scale_loss
+            elif dat_name == 'RHD':
+                cal_scale = torch.sqrt(torch.sum((outputs['joints'][:,9]-outputs['joints'][:,10])**2,1))
+                scale_loss = torch_f.mse_loss(cal_scale, examples['scales'].to(device))
+                scale_loss = args.lambda_scale * scale_loss
+                loss_dic['scale'] = scale_loss
+                
 
         # self-supervised photometric loss
         if 're_img' in outputs and ('re_sil' in outputs) and ('texture_con' in examples):
@@ -411,10 +417,16 @@ class LossFunction():
             loss_dic['perceptual'] = loss_percep
         
         # (fully supervision) silhouette loss: rendered sil -> gt sil
-        if 're_sil' in outputs and 'segms_gt' in examples:
+        if 'sil' in loss_used:
+            assert 're_sil' in outputs and 'segms_gt' in examples, 'silhouette loss needs rendered sil and gt sil'
             crit = nn.L1Loss()
             sil_loss = crit(outputs['re_sil'], examples['segms_gt'].unsqueeze(1).float())
             loss_dic['sil'] = args.lambda_silhouette * sil_loss
+
+        if 'iou' in loss_used:
+            assert 're_sil' in outputs and 'segms_gt' in examples, 'iou loss needs rendered sil and gt sil'
+            iou_loss = iou(outputs['re_sil'], examples['segms_gt'].unsqueeze(1).float())
+            loss_dic['iou'] = args.lambda_iou * iou_loss
 
         # perceptual loss: rendered img -> gt img. not used at all.
         # if 'perc_features' in outputs and ('texture_con' in examples):

@@ -216,6 +216,9 @@ def freeze_model_modules(model, args):
         if hasattr(model.module,'texture_estimator'):
             visualize_util.rec_freeze(model.module.texture_estimator)
             print("Froze texture estimator")
+        if hasattr(model.module,'light_estimator'):
+            visualize_util.rec_freeze(model.module.light_estimator)
+            print("Froze light estimator")
     if args.only_train_texture:
         if hasattr(model.module,'rgb2hm'):
             visualize_util.rec_freeze(model.module.rgb2hm)
@@ -223,9 +226,18 @@ def freeze_model_modules(model, args):
         if hasattr(model.module,'encoder'):
             visualize_util.rec_freeze(model.module.encoder)
             print("Froze encoder")
+        elif hasattr(model.module,'base_encoder'):
+            visualize_util.rec_freeze(model.module.base_encoder)
+            print("Froze base encoder")
         if hasattr(model.module,'hand_decoder'):
             visualize_util.rec_freeze(model.module.hand_decoder)
             print("Froze hand decoder")
+        visualize_util.rec_freeze(model.module.hand_encoder.base_layers)
+        print("Froze hand encoder base layers")
+        visualize_util.rec_freeze(model.module.hand_encoder.pose_reg)
+        print("Froze hand encoder pose_reg")
+        visualize_util.rec_freeze(model.module.hand_encoder.shape_reg)
+        print("Froze hand encoder shape_reg")
 
 def dump(pred_out_path, xyz_pred_list, verts_pred_list):
     """ Save predictions into a json file. """
