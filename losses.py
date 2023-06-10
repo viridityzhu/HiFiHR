@@ -416,10 +416,6 @@ class LossFunction():
             sil_loss = crit(outputs['re_sil'], examples['segms_gt'].unsqueeze(1).float())
             loss_dic['sil'] = args.lambda_silhouette * sil_loss
 
-        if 're_sil' in outputs and 'segms_gt' in examples:
-            iou_loss = iou(outputs['re_sil'], examples['segms_gt'].unsqueeze(1).float())
-            loss_dic['iou'] = args.lambda_iou * iou_loss
-
         # perceptual loss: rendered img -> gt img. not used at all.
         # if 'perc_features' in outputs and ('texture_con' in examples):
         #     perc_features = outputs['perc_features']
