@@ -10,9 +10,9 @@
 <img src="https://wakatime.com/badge/user/7974bf3e-99a6-4d26-8e4b-38ca6d5c9c64/project/f1f9ff8a-fda0-4d02-9cfd-107068c34223.svg" alt="WakaTime" />
 </p>
 <p>
-<img src="https://img.shields.io/github/languages/top/viridityzhu/HandRecon.git?style&color=5D6D7E" alt="GitHub top language" />
-<img src="https://img.shields.io/github/languages/code-size/viridityzhu/HandRecon.git?style&color=5D6D7E" alt="GitHub code size in bytes" />
-<img src="https://img.shields.io/github/commit-activity/m/viridityzhu/HandRecon.git?style&color=5D6D7E" alt="GitHub commit activity" />
+<img src="https://img.shields.io/github/languages/top/viridityzhu/HiFiHR?style&color=5D6D7E" alt="GitHub top language" />
+<img src="https://img.shields.io/github/languages/code-size/viridityzhu/HiFiHR?style&color=5D6D7E" alt="GitHub code size in bytes" />
+<img src="https://img.shields.io/github/commit-activity/m/viridityzhu/HiFiHR?style&color=5D6D7E" alt="GitHub commit activity" />
 </p>
 </div>
 
