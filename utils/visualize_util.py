@@ -27,6 +27,8 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
                 save_textured_nimble(demo_path, skin_v_smooth, tex_img=textures[0].detach().cpu().numpy(), console=console)
             else:
                 IO().save_mesh(skin_meshes[0], demo_path)
+            # save html mano hand obj
+            IO().save_mesh(skin_meshes[0], demo_path)
 
     # save display img
     file_str = os.path.join(image_output, '{:04d}_{:07d}{}.png'.format(epoch, idx, evalName))
