@@ -112,13 +112,34 @@ def load_model(model,optimizer,scheduler,args):
     #import pdb; pdb.set_trace()
     return model, current_epoch, optimizer, scheduler
 
+def load_model_html(model,optimizer,scheduler,args):
+    if args.pretrain_model is not None:
+        state_dict = torch.load(args.pretrain_model, map_location=args.device)
+        
+        if 'model_html_tex_enc' in state_dict.keys() and hasattr(model,'tex_encoder'):
+            model.tex_encoder.load_state_dict(state_dict['model_html_tex_enc'])
+        if 'model_html_light' in state_dict.keys() and hasattr(model,'light_estimator'):
+            model.light_estimator.load_state_dict(state_dict['model_html_light'])
+        try:
+            optimizer.load_state_dict(state_dict['optimizer_html'])
+        except:
+            print('optimizer_html not loaded')
+        if 'scheduler_html' in state_dict.keys():
+            scheduler.load_state_dict(state_dict['scheduler_html'])
+        else:
+            print('scheduler_html not loaded')
 
-def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=None):
+    return model, optimizer, scheduler
+
+
+def save_model(model, optimizer, scheduler, epoch,current_epoch, args, console=None, model_html=None, optimizer_html=None, scheduler_html=None ):
     state = {
         'args': args,
         'optimizer': optimizer.state_dict(),
+        'optimizer_html': optimizer_html.state_dict(),
         'epoch': epoch + current_epoch,
         'scheduler': scheduler.state_dict(),
+        'scheduler_html': scheduler_html.state_dict(),
         #'core': model.core.state_dict(),
     }
     save_file2 = None
@@ -130,6 +151,107 @@ def save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=Non
         save_file2 = os.path.join(args.state_output, f'texturehand_{epoch + current_epoch}.t7')
 
         
+    if model_html is not None:
+        # save the model
+        state['model_html_light'] = model_html.light_estimator.state_dict()
+        state['model_html_tex_enc'] = model_html.tex_encoder.state_dict()
+        
+    if args.task == 'segm_train':
+        state['seghandnet'] = model.module.seghandnet.state_dict()
+        save_file = os.path.join(args.state_output, f'seghandnet_{postfix}.t7')
+        print("[grey]Save model at:", save_file, "[/grey]")
+        torch.save(state, save_file)
+    elif args.task == 'train':
+        if hasattr(model.module,'encoder'):
+            state['encoder'] = model.module.encoder.state_dict()
+        elif hasattr(model.module,'base_encoder'):
+            state['base_encoder'] = model.module.base_encoder.state_dict()
+        if hasattr(model.module,'hand_decoder'):
+            state['decoder'] = model.module.hand_decoder.state_dict()
+        elif hasattr(model.module,'hand_encoder'):
+            state['hand_encoder'] = model.module.hand_encoder.state_dict()
+        if hasattr(model.module,'nimble_layer'):
+            state['nimble_layer'] = model.module.nimble_layer.state_dict()
+        if hasattr(model.module,'ytbHand'):
+            state['ytbHand'] = model.module.ytbHand.state_dict()
+        if hasattr(model.module,'renderer_p3d'):
+            state['renderer_p3d'] = model.module.renderer_p3d.state_dict()
+            
+        
+        if hasattr(model.module,'heatmap_attention'):
+            state['heatmap_attention'] = model.module.heatmap_attention.state_dict()
+        if hasattr(model.module,'rgb2hm'):
+            state['rgb2hm'] = model.module.rgb2hm.state_dict()
+        if hasattr(model.module,'hm2hand'):
+            state['hm2hand'] = model.module.hm2hand.state_dict()
+        if hasattr(model.module,'mesh2pose'):
+            state['mesh2pose'] = model.module.mesh2pose.state_dict()
+
+        if hasattr(model.module,'percep_encoder'):
+            state['percep_encoder'] = model.module.percep_encoder.state_dict()
+        
+        if hasattr(model.module,'texture_light_from_low'):
+            state['texture_light_from_low'] = model.module.texture_light_from_low.state_dict()
+        if hasattr(model.module,'light_estimator'):
+            state['light_estimator'] = model.module.light_estimator.state_dict()
+
+        if 'textures' in args.train_requires:
+            if hasattr(model.module,'renderer'):
+                state['renderer'] = model.module.renderer.state_dict()
+            if hasattr(model.module,'texture_estimator'):
+                state['texture_estimator'] = model.module.texture_estimator.state_dict()
+            if hasattr(model.module,'pca_texture_estimator'):
+                state['pca_texture_estimator'] = model.module.pca_texture_estimator.state_dict()
+        if 'lights' in args.train_requires:
+            if hasattr(model.module,'light_estimator'):
+                state['light_estimator'] = model.module.light_estimator.state_dict()
+                print("save light estimator")
+        save_file = os.path.join(args.state_output, f'texturehand_{postfix}.t7')
+        console.log(f"[bold green]Save model at {save_file}")
+        torch.save(state, save_file)
+        if save_file2 is not None:
+            torch.save(state, save_file2)
+            console.log(f"[bold green]Also save model at {save_file2}")
+            
+    elif args.task == 'hm_train':
+        state['rgb2hm'] = model.module.rgb2hm.state_dict()
+        save_file = os.path.join(args.state_output, f'handhm_{postfix}.t7')
+        print("Save model at:", save_file)
+        torch.save(state, save_file)
+    elif args.task == '2Dto3D':
+        state['pose_lift_net'] = model.module.pose_lift_net.state_dict()
+        save_file = os.path.join(args.state_output, f'pose_lift_net_{postfix}.t7')
+        print("Save model at:", save_file)
+        torch.save(state, save_file)
+
+    return
+
+def save_model(model, optimizer, scheduler, epoch,current_epoch, args, console=None, model_html=None, optimizer_html=None, scheduler_html=None ):
+    state = {
+        'args': args,
+        'optimizer': optimizer.state_dict(),
+        'epoch': epoch + current_epoch,
+        'scheduler': scheduler.state_dict(),
+        #'core': model.core.state_dict(),
+    }
+    if model_html is not None:
+        state.update({
+            'optimizer_html': optimizer_html.state_dict(),
+            'scheduler_html': scheduler_html.state_dict()
+        })
+    save_file2 = None
+    if args.save_mode == 'separately':
+        postfix = epoch + current_epoch
+    elif args.save_mode == 'only_latest':
+        postfix = 'latest'
+    if (epoch + current_epoch) % 20 == 0:
+        save_file2 = os.path.join(args.state_output, f'texturehand_{epoch + current_epoch}.t7')
+
+        
+    if model_html is not None:
+        # save the model
+        state['model_html_light'] = model_html.light_estimator.state_dict()
+        state['model_html_tex_enc'] = model_html.tex_encoder.state_dict()
         
     if args.task == 'segm_train':
         state['seghandnet'] = model.module.seghandnet.state_dict()

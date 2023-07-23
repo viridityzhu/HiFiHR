@@ -4,9 +4,9 @@ from rich import print
 from rich.console import Console
 
 import numpy as np
-import models as models
-# import models_res_nimble as models_new
-import models_html as models_new
+# import models as models
+import models_res_nimble as models_new
+import models_html as model_HTML
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -29,7 +29,7 @@ from utils.fh_utils import AverageMeter,EvalUtil, Frei2HO3D
 console = Console()
 test_log = {}
 
-def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, requires, args, writer=None):
+def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, model_html, optimizer,  optimizer_html, requires, args, writer=None):
     if mode_train:
         model.train()
         set_name = 'training'
@@ -61,6 +61,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         # root_xyz = examples['joints'][:, args.ROOT, :].unsqueeze(1)
         # Use the network to predict the outputs
         outputs = model(dat_name, mode_train, examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
+        outputs_html = model_html(dat_name, mode_train, model, outputs, examples['imgs'], Ks=examples['Ps'], root_xyz=root_xyz)
+
+        # add the output texture from the html model to the outputs from the main model
+        outputs.update(outputs_html)
 
         # ** positions are relative to middle root.
         if set_name != 'evaluation' and dat_name != 'HO3D':
@@ -110,8 +114,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         
         if mode_train:
             optimizer.zero_grad()
+            optimizer_html.zero_grad()
             loss.backward()
             optimizer.step()
+            optimizer_html.step()
 
         # ================================
         #       print and save results
@@ -312,7 +318,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                         writer.add_scalar('eval/l2', l2, epoch)
 
 
-def train(base_path, set_name=None, writer = None, optimizer = None, scheduler = None):
+def train(base_path, set_name=None, writer = None, optimizer = None, optimizer_html = None, scheduler = None, scheduler_html = None):
     """
         Main loop: Iterates over all evaluation samples and saves the corresponding predictions.
     """
@@ -469,7 +475,7 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                 mode_train = True
                 requires = args.train_requires
                 args.train_batch = args.train_batch
-                train_an_epoch(mode_train, dat_name, epoch + current_epoch, train_loader, model, optimizer, requires, args, writer)
+                train_an_epoch(mode_train, dat_name, epoch + current_epoch, train_loader, model, model_html, optimizer, optimizer_html, requires, args, writer)
                 torch.cuda.empty_cache()
 
                 status.update(status="[bold yellow] Testing...", spinner="weather")
@@ -482,8 +488,10 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                         args.train_batch = args.val_batch
                         train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
                         torch.cuda.empty_cache()
-                    save_model(model,optimizer,scheduler, epoch,current_epoch, args, console=console)   
+
+                    save_model(model, optimizer, scheduler, epoch,current_epoch, args, console=console, model_html=model_html, optimizer_html=optimizer_html, scheduler_html=scheduler_html)   
                 scheduler.step()
+                scheduler_html.step()
 
     elif 'evaluation' in set_name:
         mode_train = False
@@ -536,30 +544,36 @@ if __name__ == '__main__':
     #          initialize model
     # ==================================
 
-    if args.new_model:
-        print("Using new model... Equipping Resnet and NIMBLE!!")
-        model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel, hand_model=args.hand_model, use_mean_shape=args.use_mean_shape, pretrain=args.pretrain,
-                                 root_id=args.ROOT, root_id_nimble=args.ROOT_NIMBLE,
-                                 ifLight=args.light_estimation)
-    else:
-        model = models.Model(args=args)
+    model = models_new.Model(ifRender=args.render, device=args.device, if_4c=args.four_channel, hand_model=args.hand_model, use_mean_shape=args.use_mean_shape, pretrain=args.pretrain,
+                                root_id=args.ROOT, root_id_nimble=args.ROOT_NIMBLE,
+                                ifLight=args.light_estimation)
+    print('creating html model...')
+    model_html = model_HTML.Model(device=args.device, if_4c=args.four_channel, pretrain=args.pretrain)
     model.to(args.device)
+    model_html.to(args.device)
     
     if 'training' in args.mode:
         if args.optimizer == "Adam":
             optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
+            optimizer_html = optim.Adam(model_html.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
         elif args.optimizer == "AdamW":
             optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
+            optimizer_html = optim.Adam(model_html.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
+        scheduler_html = optim.lr_scheduler.MultiStepLR(optimizer_html, milestones=args.lr_steps, gamma=args.lr_gamma)
     elif 'evaluation' in args.mode:
         optimizer = optim.Adam(model.parameters(),lr=args.init_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
+        optimizer_html = optim.Adam(model_html.parameters(),lr=args.init_lr, betas=(0.9, 0.999), weight_decay=0)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
+        scheduler_html = optim.lr_scheduler.MultiStepLR(optimizer_html, milestones=args.lr_steps, gamma=args.lr_gamma)
     
     model, current_epoch, optimizer, scheduler = load_model(model, optimizer, scheduler, args)
+    model_html, optimizer_html, scheduler_html = load_model_html(model_html, optimizer_html, scheduler_html, args)
     if args.force_init_lr > 0: # default is -1, means not using this
         optimizer.param_groups[0]['lr'] = args.force_init_lr
 
     model = nn.DataParallel(model.cuda())
+    model_html = nn.DataParallel(model_html.cuda())
 
     loss_func = LossFunction()
     lpips_loss = lpips.LPIPS(net="alex").to(args.device)
@@ -573,7 +587,9 @@ if __name__ == '__main__':
         set_name=args.mode,
         writer = writer,
         optimizer = optimizer,
-        scheduler = scheduler
+        optimizer_html = optimizer_html,
+        scheduler = scheduler,
+        scheduler_html = scheduler_html
     )
     if writer is not None:
         writer.close()

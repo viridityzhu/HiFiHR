@@ -166,6 +166,48 @@ class HandEncoder(nn.Module):
             'rot':rot
         }
 
+class TexEncoder(nn.Module):
+    '''
+        Estimates:
+         HTML texture params
+    '''
+    def __init__(self, ncomps:int=101, in_dim=1024):
+        super(TexEncoder, self).__init__()
+
+        self.tex_ncomp = ncomps
+
+        # Base layers: in_dim -> 512
+        base_layers = []
+        base_layers.append(nn.Linear(in_dim, 1024))
+        base_layers.append(nn.BatchNorm1d(1024))
+        base_layers.append(nn.ReLU(inplace=True))
+        base_layers.append(nn.Linear(1024, 512))
+        base_layers.append(nn.BatchNorm1d(512))
+        base_layers.append(nn.ReLU(inplace=True))
+        self.base_layers = nn.Sequential(*base_layers)
+        self.base_layers.apply(weights_init)
+
+
+        # Texture Layers: 512 -> 10
+        layers = []
+        layers.append(nn.Linear(512, 128))
+        layers.append(nn.ReLU(inplace=True))
+        layers.append(nn.Linear(128, self.tex_ncomp))
+        self.tex_reg = nn.Sequential(*layers)
+        self.tex_reg.apply(weights_init)
+
+
+    def forward(self, features):
+        # bs = features.shape[0]
+        # device = features.device
+        
+        base_features = self.base_layers(features)
+
+        # decide texture params
+        texture_params = self.tex_reg(base_features)#shape
+            
+        return { 'texture_params': texture_params }
+
 class LightEstimator(nn.Module):
     def __init__(self, in_dim=512):
         super(LightEstimator, self).__init__()
