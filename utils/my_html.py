@@ -46,12 +46,12 @@ class MyHTMLLayer(torch.nn.Module):
 
 
     def forward(self, tex_params, verts, faces):
-        batch_size = tex_params['pose_params'].shape[0]
+        batch_size = tex_params['texture_params'].shape[0]
         verts_uvs = self.verts_uvs.repeat((batch_size, 1, 1)).contiguous()
         faces_idx = self.faces_idx.repeat((batch_size, 1, 1)).contiguous()
         faces_uvs = self.faces_uvs.repeat((batch_size, 1, 1)).contiguous()
 
-        new_tex_img = self.html.get_mano_texture(tex_params)
+        new_tex_img = self.html.get_mano_texture(tex_params['texture_params'])
         new_tex_img = new_tex_img.contiguous()
         tex = Textures(
                 maps=new_tex_img,  # BxHxWxC(3)
