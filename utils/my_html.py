@@ -61,7 +61,7 @@ class MyHTMLLayer(torch.nn.Module):
         #* not use this joints, but regress it later. Idk why.
         # mesh_face = self.mesh_face.repeat(batch_size, 1, 1)
         # skin_p3dmesh = Meshes(verts, mesh_face)
-        skin_p3dmesh = Meshes(verts=verts, faces=faces_idx, textures=tex)
+        skin_p3dmesh = Meshes(verts=verts, faces=faces, textures=tex)
         return {
             # 'nimble_joints': bone_joints, # 25 joints
             # 'joints': joints, # mano joints, 21

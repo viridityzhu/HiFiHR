@@ -91,7 +91,7 @@ class Model(nn.Module):
         
         low_features, features = model_prev.module.base_encoder(images) # [b, 512, 14, 14], [b,1024]
         
-        light_params = self.light_estimator(low_features)
+        # light_params = self.light_estimator(low_features)
 
         # Use hand_encoder to get hand parameters
         tex_params  = self.tex_encoder(features)
@@ -128,18 +128,13 @@ class Model(nn.Module):
         cameras = p3d_renderer.cameras.PerspectiveCameras(focal_length=-fcl, 
                                                             principal_point=prp,
                                                             device=device) # R and t are identity and zeros by default
-        if self.ifLight:
-            lighting = DirectionalLights(diffuse_color=light_params['colors'], # N, 3
-                                        direction=light_params['directions'], # N, 3 
-                                        device=device)
-        else:
-            lighting = p3d_renderer.lighting.PointLights(
-                # ambient_color=((1.0, 1.0, 1.0),),
-                # diffuse_color=((0.0, 0.0, 0.0),),
-                # specular_color=((0.0, 0.0, 0.0),),
-                # location=((0.0, 0.0, 0.0),),
-                device=device,
-            )
+        lighting = p3d_renderer.lighting.PointLights(
+            # ambient_color=((1.0, 1.0, 1.0),),
+            # diffuse_color=((0.0, 0.0, 0.0),),
+            # specular_color=((0.0, 0.0, 0.0),),
+            # location=((0.0, 0.0, 0.0),),
+            device=device,
+        )
 
 
         # move to the root relative coord. 
