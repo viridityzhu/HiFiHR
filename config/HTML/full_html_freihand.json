@@ -25,8 +25,8 @@
     "only_train_texture": true,
 
     "new_model": true,
-    "render": true,
-    "light_estimation": true,
+    "render": false,
+    "light_estimation": false,
     "four_channel": false,
     "hand_model": "nimble",
     "base_loss_fn": "L1",
