@@ -139,9 +139,10 @@ class Model(nn.Module):
 
         # move to the root relative coord. 
         # verts = verts - pred_root_xyz + root_xyz
-        # verts_num = outputs['skin_meshes']._num_verts_per_mesh[0]
-        # outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
-        # outputs['skin_meshes'].offset_verts_(root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
+        pred_root_xyz = outputs_prev['joints'][:, self.root_id, :].unsqueeze(1)
+        verts_num = outputs['skin_meshes']._num_verts_per_mesh[0]
+        outputs['skin_meshes'].offset_verts_(-pred_root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
+        outputs['skin_meshes'].offset_verts_(root_xyz.repeat(1, verts_num, 1).view(verts_num*batch_size, 3))
 
         # render the image
         rendered_images = self.renderer_p3d(outputs['skin_meshes'], cameras=cameras, lights=lighting)
