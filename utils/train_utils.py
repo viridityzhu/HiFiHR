@@ -250,8 +250,8 @@ def save_model(model, optimizer, scheduler, epoch,current_epoch, args, console=N
         
     if model_html is not None:
         # save the model
-        state['model_html_light'] = model_html.light_estimator.state_dict()
-        state['model_html_tex_enc'] = model_html.tex_encoder.state_dict()
+        state['model_html_light'] = model_html.module.light_estimator.state_dict()
+        state['model_html_tex_enc'] = model_html.module.tex_encoder.state_dict()
         
     if args.task == 'segm_train':
         state['seghandnet'] = model.module.seghandnet.state_dict()
