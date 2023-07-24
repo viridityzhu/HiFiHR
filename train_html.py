@@ -153,7 +153,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, model_html,
             j2d_detect_ED_list.append(j2d_detect_ED)
 
         # compute texture metric
-        if not mode_train and args.render:
+        if not mode_train:
             if dat_name == 'HO3D':
                 maskRGBs = examples['imgs'].mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
                 mask_re_img = outputs['re_img'].mul((outputs['re_sil']>0).float().repeat(1,3,1,1))
@@ -220,63 +220,62 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, model_html,
                 # pred_out_op_path = os.path.join(pred_out_path,'pred_op.json')
                 # dump(pred_out_op_path, op_xyz_pred_list, op_verts_pred_list)
 
-                # ---- evaluation: MPJPE and MPVPE after alignment --------
-                # load eval annotations
-                gt_path = args.freihand_base_path
-                xyz_list, verts_list = json_load(os.path.join(gt_path, 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'evaluation_verts.json'))
-                pose_align_all = []
-                vert_align_all = []
-                pose_3d = np.array(xyz_pred_list)
-                vert_3d = np.array(verts_pred_list)
-                pose_3d_gt = np.array(xyz_list)
-                vert_3d_gt = np.array(verts_list)
+                # # ---- evaluation: MPJPE and MPVPE after alignment --------
+                # # load eval annotations
+                # gt_path = args.freihand_base_path
+                # xyz_list, verts_list = json_load(os.path.join(gt_path, 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'evaluation_verts.json'))
+                # pose_align_all = []
+                # vert_align_all = []
+                # pose_3d = np.array(xyz_pred_list)
+                # vert_3d = np.array(verts_pred_list)
+                # pose_3d_gt = np.array(xyz_list)
+                # vert_3d_gt = np.array(verts_list)
 
-                for idx in range(pose_3d.shape[0]):
-                    #align prediction
-                    pose_pred_aligned=align_w_scale(pose_3d_gt[idx], pose_3d[idx])
-                    vert_pred_aligned=align_w_scale(vert_3d_gt[idx], vert_3d[idx])
-                    pose_align_all.append(pose_pred_aligned)
-                    vert_align_all.append(vert_pred_aligned)
-                pose_align_all = torch.from_numpy(np.array(pose_align_all)).cuda()
-                vert_align_all = torch.from_numpy(np.array(vert_align_all)).cuda()
-                pose_3d_gt = torch.from_numpy(pose_3d_gt).cuda()
-                vert_3d_gt = torch.from_numpy(vert_3d_gt).cuda()
+                # for idx in range(pose_3d.shape[0]):
+                #     #align prediction
+                #     pose_pred_aligned=align_w_scale(pose_3d_gt[idx], pose_3d[idx])
+                #     vert_pred_aligned=align_w_scale(vert_3d_gt[idx], vert_3d[idx])
+                #     pose_align_all.append(pose_pred_aligned)
+                #     vert_align_all.append(vert_pred_aligned)
+                # pose_align_all = torch.from_numpy(np.array(pose_align_all)).cuda()
+                # vert_align_all = torch.from_numpy(np.array(vert_align_all)).cuda()
+                # pose_3d_gt = torch.from_numpy(pose_3d_gt).cuda()
+                # vert_3d_gt = torch.from_numpy(vert_3d_gt).cuda()
 
-                pose_3d_loss = torch.linalg.norm((pose_align_all - pose_3d_gt), ord=2,dim=-1)
-                vert_3d_loss = torch.linalg.norm((vert_align_all - vert_3d_gt), ord=2,dim=-1)
-                pose_3d_loss = (np.concatenate(pose_3d_loss.detach().cpu().numpy(),axis=0)).mean()
-                vert_3d_loss = (np.concatenate(vert_3d_loss.detach().cpu().numpy(),axis=0)).mean()
+                # pose_3d_loss = torch.linalg.norm((pose_align_all - pose_3d_gt), ord=2,dim=-1)
+                # vert_3d_loss = torch.linalg.norm((vert_align_all - vert_3d_gt), ord=2,dim=-1)
+                # pose_3d_loss = (np.concatenate(pose_3d_loss.detach().cpu().numpy(),axis=0)).mean()
+                # vert_3d_loss = (np.concatenate(vert_3d_loss.detach().cpu().numpy(),axis=0)).mean()
 
-                console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.6f} cm, vert 3d: {vert_3d_loss * 100.0:.6f} cm")
-                test_log[epoch] = [pose_3d_loss.item(), vert_3d_loss.item()]
+                # console.log(f"Evaluation pose 3d: {pose_3d_loss * 100.0:.6f} cm, vert 3d: {vert_3d_loss * 100.0:.6f} cm")
+                # test_log[epoch] = [pose_3d_loss.item(), vert_3d_loss.item()]
 
-                best_MPJPE = min(test_log.values(), key=lambda x: x[0])[0]
-                best_results = [k for k, v in test_log.items() if v[0] == best_MPJPE]
-                best_epoch = best_results[0]
-                best_MPJPE, best_MPVPE = test_log[best_epoch]
-                console.log(f'[bold green]Best MPJPE: {best_MPJPE * 100:.6f} cm, MPVPE: {best_MPVPE * 100:.6f}, Epoch: {best_epoch}\n')
+                # best_MPJPE = min(test_log.values(), key=lambda x: x[0])[0]
+                # best_results = [k for k, v in test_log.items() if v[0] == best_MPJPE]
+                # best_epoch = best_results[0]
+                # best_MPJPE, best_MPVPE = test_log[best_epoch]
+                # console.log(f'[bold green]Best MPJPE: {best_MPJPE * 100:.6f} cm, MPVPE: {best_MPVPE * 100:.6f}, Epoch: {best_epoch}\n')
+
+                # if writer is not None:
+                #     with torch.no_grad():
+                #         writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)
+                #         writer.add_scalar('eval/vert_3d_loss', vert_3d_loss.item(), epoch)
+
+                # ----- evaluation: texture metrics --------        
+                psnr = np.mean([r['psnr'] for r in texture_metric_list])
+                ssim = np.mean([r['ssim'] for r in texture_metric_list])
+                lpips = np.mean([r['lpips'] for r in texture_metric_list])
+                l1 = np.mean([r['l1'] for r in texture_metric_list])
+                l2 = np.mean([r['l2'] for r in texture_metric_list])
+                console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
 
                 if writer is not None:
                     with torch.no_grad():
-                        writer.add_scalar('eval/pose_3d_loss', pose_3d_loss.item(), epoch)
-                        writer.add_scalar('eval/vert_3d_loss', vert_3d_loss.item(), epoch)
-
-                # ----- evaluation: texture metrics --------        
-                if args.render:
-                    psnr = np.mean([r['psnr'] for r in texture_metric_list])
-                    ssim = np.mean([r['ssim'] for r in texture_metric_list])
-                    lpips = np.mean([r['lpips'] for r in texture_metric_list])
-                    l1 = np.mean([r['l1'] for r in texture_metric_list])
-                    l2 = np.mean([r['l2'] for r in texture_metric_list])
-                    console.log(f'[bold green]PSNR:  {psnr:8.4f}, SSIM:  {ssim:8.4f}, LPIPS: {lpips:8.4f}, l1: {l1:8.4f}, l2: {l2:8.4f}\n')
-
-                    if writer is not None:
-                        with torch.no_grad():
-                            writer.add_scalar('eval/psnr', psnr, epoch)
-                            writer.add_scalar('eval/ssim', ssim, epoch)
-                            writer.add_scalar('eval/lpips', lpips, epoch)
-                            writer.add_scalar('eval/l1', l1, epoch)
-                            writer.add_scalar('eval/l2', l2, epoch)
+                        writer.add_scalar('eval/psnr', psnr, epoch)
+                        writer.add_scalar('eval/ssim', ssim, epoch)
+                        writer.add_scalar('eval/lpips', lpips, epoch)
+                        writer.add_scalar('eval/l1', l1, epoch)
+                        writer.add_scalar('eval/l2', l2, epoch)
 
         if args.save_2d:
             save_2d_result(j2d_pred_ED_list, j2d_proj_ED_list, j2d_detect_ED_list, args=args, epoch=epoch)
@@ -486,7 +485,7 @@ def train(base_path, set_name=None, writer = None, optimizer = None, optimizer_h
                         mode_train = False
                         requires = args.test_requires
                         args.train_batch = args.val_batch
-                        train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, optimizer, requires, args, writer)
+                        train_an_epoch(mode_train, dat_name_val, epoch + current_epoch, val_loader, model, model_html, optimizer, optimizer_html, requires, args, writer)
                         torch.cuda.empty_cache()
 
                     save_model(model, optimizer, scheduler, epoch,current_epoch, args, console=console, model_html=model_html, optimizer_html=optimizer_html, scheduler_html=scheduler_html)   
