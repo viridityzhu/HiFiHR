@@ -23,7 +23,7 @@
     "demo_freq": 60,
 
     "new_model": true,
-    "render": true,
+    "render": false,
     "light_estimation": false,
     "four_channel": false,
     "hand_model": "nimble",

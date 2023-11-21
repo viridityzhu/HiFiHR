@@ -1,5 +1,10 @@
 import random
 import torchvision
+import cv2
+import numpy as np
+from PIL import Image
+
+from FDA.utils import FDA_source_to_target_np
 
 
 def get_color_params(brightness=0, contrast=0, saturation=0, hue=0):
@@ -51,3 +56,79 @@ def color_jitter(img, brightness=0, contrast=0, saturation=0, hue=0):
     for func in img_transforms:
         jittered_img = func(jittered_img)
     return jittered_img
+
+def add_arm(img, idx):
+    if idx >= 32560:
+        idx = idx % 32560
+    img_id = "%08d" % (idx)
+    
+    input_image = cv2.imread('/home/zhuoran/data/training/rgb/' + img_id + '.jpg')
+    input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
+
+    syn_image = np.array(img)
+    syn_mask = cv2.imread('/home/zhuoran/data/freihand/segmentation/' + img_id + '.png', cv2.IMREAD_GRAYSCALE)
+    syn_mask = (syn_mask > 0).astype(np.uint8) * 255
+
+    syn_hand = cv2.bitwise_and(syn_image, syn_image, mask=syn_mask)
+
+    hand_arm_mask = cv2.imread('/home/zhuoran/data/freihand/hand_arm_mask/' + img_id + '.png', cv2.IMREAD_GRAYSCALE)
+    hand_mask = cv2.imread('/home/zhuoran/data/freihand/hand_mask/' + img_id + '.png', cv2.IMREAD_GRAYSCALE)
+    arm_mask = hand_arm_mask & ~hand_mask
+
+    hand_with_arm = cv2.bitwise_and(input_image, input_image, mask=arm_mask)
+    hand_with_arm_clean = cv2.bitwise_and(hand_with_arm, hand_with_arm, mask=(255 - syn_mask))
+
+    scene = cv2.bitwise_and(syn_image, syn_image, mask = (255 - arm_mask))
+    scene = cv2.bitwise_or(scene, scene, mask = (255 - syn_mask))
+    
+    img_with_arm = scene + hand_with_arm_clean + syn_hand
+    
+    return img_with_arm
+
+def linear_transform(value, cmin, cmax, a, b):
+    return int(a + (b - a) * (value - cmin) / (cmax - cmin))
+
+def add_fourier(img):
+    # randomly choose target image
+    img_id = str(random.randint(0, 32560 * 4 - 1)).rjust(8, '0')
+    # img_id = str(random.randint(0, 3960 - 1)).rjust(8, '0')
+
+    im_src = img
+    im_trg = Image.open("/home/zhuoran/data/training/rgb/" + img_id + ".jpg").convert('RGB')
+    # im_trg = Image.open("/home/zhuoran/data/evaluation/rgb/" + img_id + ".jpg").convert('RGB')
+
+    im_src = np.asarray(im_src, np.float32)
+    im_trg = np.asarray(im_trg, np.float32)
+
+    im_src = im_src.transpose((2, 0, 1))
+    im_trg = im_trg.transpose((2, 0, 1))
+
+    src_in_trg = FDA_source_to_target_np( im_src, im_trg, L=0.01 )
+
+    src_in_trg = src_in_trg.transpose((1,2,0))
+
+    cmin, cmax = 0.0, 255.0
+    src_in_trg = np.clip((src_in_trg - cmin) * (255.0 / (cmax - cmin)), 0, 255).astype(np.uint8)
+
+    src_in_trg = Image.fromarray(src_in_trg)
+    
+    return src_in_trg
+
+def add_occ_obj(img, idx):
+    if idx >= 32560:
+        idx = idx % 32560
+    img_id = "%08d" % (idx)
+    
+    origin_img = cv2.imread("/home/zhuoran/data/training/rgb/" + img_id + ".jpg")
+    origin_img = cv2.cvtColor(origin_img, cv2.COLOR_BGR2RGB)
+    final_mask = cv2.imread('/home/zhuoran/data/freihand/final_mask/' + img_id + '.png', cv2.IMREAD_GRAYSCALE)
+    final_mask = (final_mask > 0).astype(np.uint8) * 255
+    mask_obj = cv2.bitwise_and(origin_img, origin_img, mask=final_mask)
+    
+    syn_img = np.array(img)
+    syn_mask = (final_mask == 0).astype(np.uint8) * 255
+    mask_syn_img = cv2.bitwise_and(syn_img, syn_img, mask=syn_mask)
+    
+    final_syn_img = mask_syn_img + mask_obj
+    
+    return final_syn_img

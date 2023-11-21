@@ -12,6 +12,7 @@ import json
 import skimage.io as io
 from PIL import Image, ImageFilter
 from torchvision.transforms import functional as func_transforms
+import torchvision.transforms as transforms
 #import torchvision
 
 import tqdm
@@ -50,12 +51,20 @@ def get_dataset(
     limit_size=None,
     train = False,
     split = None,
-    if_use_j2d: bool = False
+    if_use_j2d: bool = False,
+    syn_rgb_count: int = 10,
+    if_add_erase: bool = False,
+    if_add_arm: bool = False,
+    if_add_fourier: bool = False,
+    aug_ratio: float = 0.1,
+    if_add_occ: bool = False,
 ):
     if dat_name == "FreiHand":
         pose_dataset = FreiHand(
             base_path=base_path,
-            set_name = set_name)
+            set_name = set_name,
+            syn_rgb_count = syn_rgb_count,
+        )
         sides = 'right',
     elif dat_name == "Dart":
         if set_name == 'training':
@@ -91,7 +100,12 @@ def get_dataset(
         #directory=None,
         is_train=train,
         #set_name=None,
-        if_use_j2d = if_use_j2d
+        if_use_j2d = if_use_j2d,
+        if_add_erase = if_add_erase,
+        if_add_arm = if_add_arm,
+        if_add_fourier = if_add_fourier,
+        aug_ratio = aug_ratio,
+        if_add_occ = if_add_occ,
     )
     
     if limit_size is not None:
@@ -115,6 +129,11 @@ class HandDataset(Dataset):
         dat_name,
         pose_dataset, 
         if_use_j2d: bool,
+        if_add_erase: bool,
+        if_add_arm: bool,
+        if_add_fourier: bool,
+        aug_ratio: float,
+        if_add_occ: bool,
         #directory=None, 
         is_train=None, 
         #set_name=None,
@@ -146,6 +165,13 @@ class HandDataset(Dataset):
         self.black_padding = False
         self.data_pre = False
         self.if_use_j2d = if_use_j2d
+        
+        self.if_add_erase = if_add_erase
+        self.if_add_arm = if_add_arm
+        self.if_add_fourier = if_add_fourier
+        self.aug_ratio = aug_ratio
+        self.if_add_occ = if_add_occ
+        
     
     def __len__(self):
         return len(self.pose_dataset)
@@ -221,6 +247,18 @@ class HandDataset(Dataset):
             # augmentated results
             if self.train:
                 if 'trans_images' in query:
+                    if self.if_add_arm and idx < len(self.pose_dataset) * self.aug_ratio:
+                        image = imgtrans.add_arm(image, idx)
+                        image = Image.fromarray(image)
+                    
+                    if self.if_add_fourier and idx < len(self.pose_dataset) * self.aug_ratio:
+                        image = imgtrans.add_fourier(image)
+                        
+                    # Add occluded objects
+                    if self.if_add_occ:
+                        image = imgtrans.add_occ_obj(image, idx)
+                        image = Image.fromarray(image)
+                    
                     center = np.asarray([112, 112])
                     scale = 224
                     # Scale jittering
@@ -249,7 +287,21 @@ class HandDataset(Dataset):
                     trans_images = handutils.transform_img(
                         image, affinetrans, [224, 224]
                     )
-                    sample['trans_images'] = func_transforms.to_tensor(trans_images).float()
+                    
+                    trans_images = func_transforms.to_tensor(trans_images).float()
+                    
+                    # Random erasing
+                    if self.if_add_erase:
+                        p = 0.2 # 0.5  # Probability of applying random erasing
+                        scale = (0.02, 0.33)  # Erasing scale range
+                        ratio = (0.3, 3.3)  # Aspect ratio range
+                        value = 0  # Pixel value for the erased region
+                        
+                        transform = transforms.RandomErasing(p=p, scale=scale, ratio=ratio, value=value, inplace=True)
+                        trans_images = transform(trans_images)
+                    
+                    # sample['trans_images'] = func_transforms.to_tensor(trans_images).float()
+                    sample['trans_images'] = trans_images
                     sample['post_rot_trans']=post_rot_trans
                     sample['rot'] = rot
                 if 'trans_open_2dj' in query:
@@ -1405,9 +1457,11 @@ class FreiHand:
         set_name=None,
         base_path=None,
         split = 'train',
+        syn_rgb_count = 10,
     ):
         self.set_name = set_name
         self.base_path = base_path
+        self.syn_rgb_count = syn_rgb_count
         self.load_dataset()
         self.name = "FreiHand"
         self.split = split
@@ -1462,29 +1516,36 @@ class FreiHand:
             if self.set_name == 'trainval_train':
                 prefixes = prefixes[:30000]
             elif self.set_name == 'trainval_val':
-                prefixes = prefixes[30000:]
-            del mask_idxs
-            '''
+                prefixes = prefixes[30000:]            
             
             # FOR 32560*4
-            img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, dataset_name, 'rgb')))]
-            if self.set_name == 'trainval_train':
-                img_idxs = img_idxs[:30000] + img_idxs[32560:30000+32560] + img_idxs[32560*2:30000+32560*2]+ img_idxs[32560*3:30000+32560*3]
-            elif self.set_name == 'trainval_val':
-                img_idxs = img_idxs[30000:32560] + img_idxs[30000+32560:32560*2] + img_idxs[30000+32560*2:32560*3] + img_idxs[30000+32560*3:]
+            # img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, dataset_name, 'rgb')))]
+            # if self.set_name == 'trainval_train':
+            #     img_idxs = img_idxs[:30000] + img_idxs[32560:30000+32560] + img_idxs[32560*2:30000+32560*2]+ img_idxs[32560*3:30000+32560*3]
+            # elif self.set_name == 'trainval_val':
+            #     img_idxs = img_idxs[30000:32560] + img_idxs[30000+32560:32560*2] + img_idxs[30000+32560*2:32560*3] + img_idxs[30000+32560*3:]
             
             #elif self.set_name == 'training':
-            self.K_list = self.K_list + self.K_list + self.K_list + self.K_list
-            self.scale_list = self.scale_list + self.scale_list + self.scale_list + self.scale_list
-            self.mano_list = self.mano_list + self.mano_list + self.mano_list + self.mano_list
-            self.joint_list = self.joint_list + self.joint_list + self.joint_list + self.joint_list
-            self.verts_list = self.verts_list + self.verts_list + self.verts_list + self.verts_list
-            self.open_2dj_list = self.open_2dj_list + self.open_2dj_list + self.open_2dj_list + self.open_2dj_list
-            self.open_2dj_con_list = self.open_2dj_con_list + self.open_2dj_con_list + self.open_2dj_con_list + self.open_2dj_con_list
-            self.prefix_template = "{:08d}"
-            prefixes = [self.prefix_template.format(idx) for idx in img_idxs]
+            # self.K_list = self.K_list + self.K_list + self.K_list + self.K_list
+            # self.scale_list = self.scale_list + self.scale_list + self.scale_list + self.scale_list
+            # self.mano_list = self.mano_list + self.mano_list + self.mano_list + self.mano_list
+            # self.joint_list = self.joint_list + self.joint_list + self.joint_list + self.joint_list
+            # self.verts_list = self.verts_list + self.verts_list + self.verts_list + self.verts_list
+            # self.open_2dj_list = self.open_2dj_list + self.open_2dj_list + self.open_2dj_list + self.open_2dj_list
+            # self.open_2dj_con_list = self.open_2dj_con_list + self.open_2dj_con_list + self.open_2dj_con_list + self.open_2dj_con_list
+
+            self.K_list = self.K_list * self.syn_rgb_count
+            self.scale_list = self.scale_list * self.syn_rgb_count
+            self.mano_list = self.mano_list * self.syn_rgb_count
+            self.joint_list = self.joint_list * self.syn_rgb_count
+            self.verts_list = self.verts_list * self.syn_rgb_count
+            self.open_2dj_list = self.open_2dj_list * self.syn_rgb_count
+            self.open_2dj_con_list = self.open_2dj_con_list * self.syn_rgb_count
+            
+            # self.prefix_template = "{:08d}"
+            # prefixes = [self.prefix_template.format(idx) for idx in img_idxs]
             #mask_names = []
-            '''
+            
             
         elif self.set_name == 'evaluation':
             img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, self.set_name, 'rgb')))]
@@ -1499,12 +1560,33 @@ class FreiHand:
             self.CRFmask_dir = os.path.join(self.base_path, 'CRFmask/evaluation')
         
         image_names = []
-        for idx, prefix in enumerate(prefixes):
-            image_path = os.path.join(self.base_path, dataset_name, 'rgb', '{}.jpg'.format(prefix))
-            #mask_path = os.path.join(self.base_path, 'mask', '{}.jpg'.format(prefix))
-            image_names.append(image_path)
-            #mask_names.append(mask_path)
+        mask_names = []
+        
+        if self.set_name == 'training':
+            for count in range(self.syn_rgb_count):
+                for idx, prefix in enumerate(prefixes):
+                    mask_path = os.path.join(self.base_path, 'freihand', 'segmentation', '{}.png'.format(prefix))
+                    mask_names.append(mask_path)
+                    
+                    image_path = os.path.join(self.base_path, 'freihand', 'rgb' + '_' + str(count), '{}.png'.format(prefix))
+                    image_names.append(image_path)
+                    
+                    # mask_path = os.path.join(self.base_path, dataset_name, 'mask', '{}.jpg'.format(prefix))
+                    # mask_names.append(mask_path)
+                    # prefix = self.prefix_template.format(len(mask_idxs) * count + idx)
+                    # image_path = os.path.join(self.base_path, dataset_name, 'rgb', '{}.jpg'.format(prefix))
+                    # image_names.append(image_path)
+            
+            del mask_idxs
+                    
+        elif self.set_name == 'evaluation':
+            for idx, prefix in enumerate(prefixes):
+                image_path = os.path.join(self.base_path, dataset_name, 'rgb', '{}.jpg'.format(prefix))
+                #mask_path = os.path.join(self.base_path, 'mask', '{}.jpg'.format(prefix))
+                image_names.append(image_path)
+                #mask_names.append(mask_path)
         self.image_names = image_names
+        self.mask_names = mask_names
         del image_names
         del prefixes
 
@@ -1520,9 +1602,14 @@ class FreiHand:
         return cv_image
     
     def get_mask(self, idx):
-        image_path = self.image_names[idx]
-        #mask_path = self.mask_names[idx]
-        mask_path = image_path.replace('rgb','mask')
+        # image_path = self.image_names[idx]
+        mask_path = self.mask_names[idx]
+        # if self.set_name == 'training':
+        #     rgb_idx = image_path.find('rgb')
+        #     rgb_folder = image_path[rgb_idx:rgb_idx+5]
+        #     mask_path = image_path.replace(rgb_folder,'mask').replace('png', 'jpg')
+        # elif self.set_name == 'evaluation':
+        #     mask_path = image_path.replace('rgb','mask').replace('png', 'jpg')
         #mask = cv2.imread(mask_path, 1)
         mask = Image.open(mask_path)
         #mask = func_transforms.to_tensor(mask)
