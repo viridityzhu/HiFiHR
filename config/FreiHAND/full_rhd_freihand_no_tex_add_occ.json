@@ -50,7 +50,7 @@
     "aug_ratio": 0.5,
 
     "pretrain": "effb3",
-    "pretrain_model": "/home/zhuoran/HandRecon/outputs/freihand/fully_rhd_no_tex_add_occ/model/texturehand_79.t7",
+    "pretrain_model": "/home/zhuoran/HandRecon/outputs/freihand/fully_rhd_no_tex_add_occ/model/texturehand_104.t7",
 
     "train_queries": ["trans_images", "trans_Ks", "trans_joints", "scales", "trans_verts", "trans_masks"],
     "val_queries": [ "images", "Ks", "joints", "scales", "verts"],
