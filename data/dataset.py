@@ -29,7 +29,7 @@ from utils.fh_utils import proj_func
 
 import copy
 import imageio
-from pytorch3d.io import load_obj
+# from pytorch3d.io import load_obj
 try:
     from manotorch.manolayer import ManoLayer
 except:
@@ -252,7 +252,12 @@ class HandDataset(Dataset):
                         image = Image.fromarray(image)
                     
                     if self.if_add_fourier and idx < len(self.pose_dataset) * self.aug_ratio:
-                        image = imgtrans.add_fourier(image)
+                        # image = imgtrans.add_fourier(image)
+                        # image = imgtrans.add_pasta(image)
+                        
+                        # histogram matching
+                        image = imgtrans.hist_match(image)
+                        image = Image.fromarray(image.astype(np.uint8))
                         
                     # Add occluded objects
                     if self.if_add_occ:
@@ -1472,13 +1477,13 @@ class FreiHand:
             dataset_name = 'evaluation'
         else:
             dataset_name = 'training'
-        self.K_list = json_load(os.path.join(self.base_path, '%s_K.json' % dataset_name))
-        self.scale_list = json_load(os.path.join(self.base_path, '%s_scale.json' % dataset_name))
-        self.mano_list = json_load(os.path.join(self.base_path, '%s_mano.json' % dataset_name))
-        self.joint_list = json_load(os.path.join(self.base_path, '%s_xyz.json' % dataset_name))
-        self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % self.set_name))
+        self.K_list = json_load(os.path.join(self.base_path, 'freihand_real', '%s_K.json' % dataset_name))
+        self.scale_list = json_load(os.path.join(self.base_path, 'freihand_real', '%s_scale.json' % dataset_name))
+        self.mano_list = json_load(os.path.join(self.base_path, 'freihand_real', '%s_mano.json' % dataset_name))
+        self.joint_list = json_load(os.path.join(self.base_path, 'freihand_real', '%s_xyz.json' % dataset_name))
+        self.verts_list = json_load(os.path.join(self.base_path, 'freihand_real', '%s_verts.json' % self.set_name))
         
-        openpose_v2_path = '/home/zhuoran/HandRecon/mydata/'
+        openpose_v2_path = '/root/HiFiHR/'
                 
         if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':# only 32560
             #self.open_2dj_lists = json_load('/data/FreiHand_save/debug/detect_all.json')
@@ -1510,7 +1515,7 @@ class FreiHand:
             #img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path,'rgb')))]
             # only 32560
             
-            mask_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, dataset_name, 'mask')))]
+            mask_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, 'freihand_real', dataset_name, 'mask')))]
             self.prefix_template = "{:08d}"
             prefixes = [self.prefix_template.format(idx) for idx in mask_idxs]
             if self.set_name == 'trainval_train':
@@ -1548,7 +1553,7 @@ class FreiHand:
             
             
         elif self.set_name == 'evaluation':
-            img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, self.set_name, 'rgb')))]
+            img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, 'freihand_real', self.set_name, 'rgb')))]
             self.prefix_template = "{:08d}"
             prefixes = [self.prefix_template.format(idx) for idx in img_idxs]
             self.open_2dj_lists = json_load(os.path.join(openpose_v2_path, 'openpose_v2/evaluation', 'detect.json'))
@@ -1581,7 +1586,7 @@ class FreiHand:
                     
         elif self.set_name == 'evaluation':
             for idx, prefix in enumerate(prefixes):
-                image_path = os.path.join(self.base_path, dataset_name, 'rgb', '{}.jpg'.format(prefix))
+                image_path = os.path.join(self.base_path, 'freihand_real', dataset_name, 'rgb', '{}.jpg'.format(prefix))
                 #mask_path = os.path.join(self.base_path, 'mask', '{}.jpg'.format(prefix))
                 image_names.append(image_path)
                 #mask_names.append(mask_path)

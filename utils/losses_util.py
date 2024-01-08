@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 
 import torchvision
-from pytorch3d.loss import mesh_laplacian_smoothing
+# from pytorch3d.loss import mesh_laplacian_smoothing
 from pytorch3d.structures import Meshes
 
 class VGGPerceptualLoss(torch.nn.Module):

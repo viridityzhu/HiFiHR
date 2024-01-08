@@ -2,11 +2,11 @@
     "mode_0": ["evaluation"],
     "mode": ["evaluation"],
     "task": "train",
-    "freihand_base_path": "/mnt/data/zhuoran/FreiHand",
-    "base_out_path": "/home/zhuoran/HandRecon/outputs/freihand/no_texture_baseline_frei/evaluation",
+    "freihand_base_path": "/root/autodl-tmp/",
+    "base_out_path": "/home/zhuoran/HandRecon/outputs/freihand/fully_rhd_no_tex_add_occ_fourier_arm_aug/evaluation",
     "is_write_tb": false,
     "writer_topic": "/home/zhuoran/HandRecon/runs/evaluation/",
-    "val_batch": 5,
+    "val_batch": 2,
     "num_workers":1,
     "demo_freq_evaluation":1,
     "img_wise_save":false,
@@ -23,7 +23,7 @@
     "use_mean_shape": false,
 
     "pretrain": "effb3",
-    "pretrain_model": "/home/zhuoran/HandRecon/outputs/freihand/no_texture_baseline_frei/model/texturehand_94.t7",
+    "pretrain_model": "/root/HiFiHR/models/texturehand_98.t7",
     "val_queries": ["images", "Ks", "joints", "scales", "verts"],
     "train_requires": ["heatmaps", "joints","verts","textures","lights"],
     "test_requires": ["heatmaps", "joints","verts","textures","lights"]

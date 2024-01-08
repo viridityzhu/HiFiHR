@@ -10,15 +10,15 @@ import time
 
 import numpy as np
 import pytorch3d
-from pytorch3d.renderer import (
-    RasterizationSettings,
-    MeshRenderer, 
-    MeshRasterizer,
-    HardPhongShader,
-    Materials
-)
-from pytorch3d.renderer.lighting import DirectionalLights
-import pytorch3d.renderer as p3d_renderer
+# from pytorch3d.renderer import (
+#     RasterizationSettings,
+#     MeshRenderer, 
+#     MeshRasterizer,
+#     HardPhongShader,
+#     Materials
+# )
+# from pytorch3d.renderer.lighting import DirectionalLights
+# import pytorch3d.renderer as p3d_renderer
 from network.res_encoder import ResEncoder, HandEncoder, LightEstimator
 from network.effnet_encoder import EffiEncoder
 from utils.NIMBLE_model.myNIMBLELayer import MyNIMBLELayer
