@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 
 from FDA.utils import FDA_source_to_target_np
+from PASTA.utils import PASTA
 
 
 def get_color_params(brightness=0, contrast=0, saturation=0, hue=0):
@@ -113,6 +114,16 @@ def add_fourier(img):
     src_in_trg = Image.fromarray(src_in_trg)
     
     return src_in_trg
+
+def add_pasta_fourier(img):
+    alpha = 3.0
+    beta = 0.25
+    k = 2
+
+    syn_transform = PASTA(alpha=alpha, beta=beta, k=k)    
+    aug_img = syn_transform(img)
+
+    return aug_img
 
 def add_occ_obj(img, idx):
     if idx >= 32560:

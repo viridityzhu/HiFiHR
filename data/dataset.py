@@ -29,7 +29,7 @@ from utils.fh_utils import proj_func
 
 import copy
 import imageio
-from pytorch3d.io import load_obj
+# from pytorch3d.io import load_obj
 try:
     from manotorch.manolayer import ManoLayer
 except:
@@ -56,7 +56,9 @@ def get_dataset(
     if_add_erase: bool = False,
     if_add_arm: bool = False,
     if_add_fourier: bool = False,
-    aug_ratio: float = 0.1,
+    # aug_ratio: float = 0.1,
+    arm_aug_ratio: float = 0.1,
+    fourier_aug_ratio: float = 0.1,
     if_add_occ: bool = False,
 ):
     if dat_name == "FreiHand":
@@ -104,7 +106,9 @@ def get_dataset(
         if_add_erase = if_add_erase,
         if_add_arm = if_add_arm,
         if_add_fourier = if_add_fourier,
-        aug_ratio = aug_ratio,
+        # aug_ratio = aug_ratio,
+        arm_aug_ratio = arm_aug_ratio,
+        fourier_aug_ratio = fourier_aug_ratio,
         if_add_occ = if_add_occ,
     )
     
@@ -132,7 +136,9 @@ class HandDataset(Dataset):
         if_add_erase: bool,
         if_add_arm: bool,
         if_add_fourier: bool,
-        aug_ratio: float,
+        # aug_ratio: float,
+        arm_aug_ratio: float,
+        fourier_aug_ratio: float,
         if_add_occ: bool,
         #directory=None, 
         is_train=None, 
@@ -169,7 +175,9 @@ class HandDataset(Dataset):
         self.if_add_erase = if_add_erase
         self.if_add_arm = if_add_arm
         self.if_add_fourier = if_add_fourier
-        self.aug_ratio = aug_ratio
+        # self.aug_ratio = aug_ratio
+        self.arm_aug_ratio = arm_aug_ratio
+        self.fourier_aug_ratio = fourier_aug_ratio
         self.if_add_occ = if_add_occ
         
     
@@ -247,16 +255,20 @@ class HandDataset(Dataset):
             # augmentated results
             if self.train:
                 if 'trans_images' in query:
-                    if self.if_add_arm and idx < len(self.pose_dataset) * self.aug_ratio:
+                    if self.if_add_arm and idx < len(self.pose_dataset) * self.arm_aug_ratio:
                         image = imgtrans.add_arm(image, idx)
                         image = Image.fromarray(image)
                     
-                    if self.if_add_fourier and idx < len(self.pose_dataset) * self.aug_ratio:
-                        image = imgtrans.add_fourier(image)
+                    if self.if_add_fourier and idx < len(self.pose_dataset) * self.fourier_aug_ratio:
+                        # image = imgtrans.add_fourier(image) # FDA
+                        
+                        image = func_transforms.to_tensor(image).float()
+                        image = imgtrans.add_pasta_fourier(image) # PASTA
+                        image = transforms.ToPILImage()(image)
                         
                     # Add occluded objects
                     if self.if_add_occ:
-                        image = imgtrans.add_occ_obj(image, idx)
+                        image = imgtrans.add_occ_obj(image, idx     )
                         image = Image.fromarray(image)
                     
                     center = np.asarray([112, 112])
@@ -353,7 +365,6 @@ class HandDataset(Dataset):
             else:
                 needs_center_scale = False
             '''
-            
 
             image = self.pose_dataset.get_img(idx)
             
@@ -1478,7 +1489,7 @@ class FreiHand:
         self.joint_list = json_load(os.path.join(self.base_path, '%s_xyz.json' % dataset_name))
         self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % self.set_name))
         
-        openpose_v2_path = '/home/zhuoran/HandRecon/mydata/'
+        openpose_v2_path = '/home/zhuoran/dest/HandRecon/mydata/'
                 
         if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':# only 32560
             #self.open_2dj_lists = json_load('/data/FreiHand_save/debug/detect_all.json')

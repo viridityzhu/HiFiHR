@@ -10,7 +10,7 @@ import trimesh
 from utils.NIMBLE_model.utils import batch_to_tensor_device, smooth_mesh
 from utils.NIMBLE_model.utils import *
 from pytorch3d.structures.meshes import Meshes
-from pytorch3d.renderer import Textures
+# from pytorch3d.renderer import Textures
 from torch.autograd import Variable
 import pickle
 

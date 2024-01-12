@@ -24,8 +24,8 @@ from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei, ortho_project
 from utils.fh_utils import AverageMeter,EvalUtil, Frei2HO3D
 
-torch.cuda.set_device(3)
-os.environ['CUDA_VISIBLE_DEVICES'] ='3'
+torch.cuda.set_device(2)
+os.environ['CUDA_VISIBLE_DEVICES'] ='2'
 
 console = Console()
 test_log = {}
@@ -368,7 +368,9 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                     if_add_erase = args.if_add_erase,
                     if_add_arm = args.if_add_arm,
                     if_add_fourier = args.if_add_fourier,
-                    aug_ratio = args.aug_ratio,
+                    # aug_ratio = args.aug_ratio,
+                    arm_aug_ratio = args.arm_aug_ratio,
+                    fourier_aug_ratio = args.fourier_aug_ratio,
                     if_add_occ = args.if_add_occ,
                     #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
                 )
@@ -515,7 +517,7 @@ if __name__ == '__main__':
                 setattr(args, parse_key, parse_value)
     
     args = train_options.make_output_dir(args)
-    args.device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     args.ROOT = 9
     args.ROOT_NIMBLE = 11
     args.lambda_pose = args.lambda_pose_list[0]
@@ -562,7 +564,7 @@ if __name__ == '__main__':
     if args.force_init_lr > 0: # default is -1, means not using this
         optimizer.param_groups[0]['lr'] = args.force_init_lr
 
-    model = nn.DataParallel(model.to(args.device), device_ids=[3])
+    model = nn.DataParallel(model.to(args.device), device_ids=[2])
 
     loss_func = LossFunction()
     lpips_loss = lpips.LPIPS(net="alex").to(args.device)

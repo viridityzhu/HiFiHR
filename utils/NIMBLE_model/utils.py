@@ -8,7 +8,7 @@ import pytorch3d
 import numpy as np
 from pathlib import Path
 from pytorch3d.structures.meshes import Meshes
-import pytorch3d.ops
+# import pytorch3d.ops
 from rich import print
 
 ROOT_JOINT_IDX = 0  # wrist
