@@ -261,14 +261,15 @@ class HandDataset(Dataset):
                     
                     if self.if_add_fourier and idx < len(self.pose_dataset) * self.fourier_aug_ratio:
                         # image = imgtrans.add_fourier(image) # FDA
+                        image = imgtrans.add_pasta(image) # PASTA
                         
-                        image = func_transforms.to_tensor(image).float()
-                        image = imgtrans.add_pasta_fourier(image) # PASTA
-                        image = transforms.ToPILImage()(image)
+                        # # histogram matching
+                        # image = imgtrans.hist_match(image)
+                        # image = Image.fromarray(image.astype(np.uint8))
                         
                     # Add occluded objects
                     if self.if_add_occ:
-                        image = imgtrans.add_occ_obj(image, idx     )
+                        image = imgtrans.add_occ_obj(image, idx)
                         image = Image.fromarray(image)
                     
                     center = np.asarray([112, 112])
@@ -1483,13 +1484,13 @@ class FreiHand:
             dataset_name = 'evaluation'
         else:
             dataset_name = 'training'
-        self.K_list = json_load(os.path.join(self.base_path, '%s_K.json' % dataset_name))
-        self.scale_list = json_load(os.path.join(self.base_path, '%s_scale.json' % dataset_name))
-        self.mano_list = json_load(os.path.join(self.base_path, '%s_mano.json' % dataset_name))
-        self.joint_list = json_load(os.path.join(self.base_path, '%s_xyz.json' % dataset_name))
-        self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % self.set_name))
+        self.K_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_K.json' % dataset_name))
+        self.scale_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_scale.json' % dataset_name))
+        self.mano_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_mano.json' % dataset_name))
+        self.joint_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_xyz.json' % dataset_name))
+        self.verts_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_verts.json' % self.set_name))
         
-        openpose_v2_path = '/home/zhuoran/dest/HandRecon/mydata/'
+        openpose_v2_path = '/home/zhuoran/dest/HandRecon/mydata'
                 
         if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':# only 32560
             #self.open_2dj_lists = json_load('/data/FreiHand_save/debug/detect_all.json')
@@ -1521,7 +1522,7 @@ class FreiHand:
             #img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path,'rgb')))]
             # only 32560
             
-            mask_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, dataset_name, 'mask')))]
+            mask_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, 'FreiHand', dataset_name, 'mask')))]
             self.prefix_template = "{:08d}"
             prefixes = [self.prefix_template.format(idx) for idx in mask_idxs]
             if self.set_name == 'trainval_train':
@@ -1559,7 +1560,7 @@ class FreiHand:
             
             
         elif self.set_name == 'evaluation':
-            img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, self.set_name, 'rgb')))]
+            img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, 'FreiHand', self.set_name, 'rgb')))]
             self.prefix_template = "{:08d}"
             prefixes = [self.prefix_template.format(idx) for idx in img_idxs]
             self.open_2dj_lists = json_load(os.path.join(openpose_v2_path, 'openpose_v2/evaluation', 'detect.json'))
@@ -1576,10 +1577,10 @@ class FreiHand:
         if self.set_name == 'training':
             for count in range(self.syn_rgb_count):
                 for idx, prefix in enumerate(prefixes):
-                    mask_path = os.path.join(self.base_path, 'freihand', 'segmentation', '{}.png'.format(prefix))
+                    mask_path = os.path.join(self.base_path, 'FreiHand_syn', 'segmentation', '{}.png'.format(prefix))
                     mask_names.append(mask_path)
                     
-                    image_path = os.path.join(self.base_path, 'freihand', 'rgb' + '_' + str(count), '{}.png'.format(prefix))
+                    image_path = os.path.join(self.base_path, 'FreiHand_syn', 'rgb' + '_' + str(count), '{}.png'.format(prefix))
                     image_names.append(image_path)
                     
                     # mask_path = os.path.join(self.base_path, dataset_name, 'mask', '{}.jpg'.format(prefix))
@@ -1592,7 +1593,7 @@ class FreiHand:
                     
         elif self.set_name == 'evaluation':
             for idx, prefix in enumerate(prefixes):
-                image_path = os.path.join(self.base_path, dataset_name, 'rgb', '{}.jpg'.format(prefix))
+                image_path = os.path.join(self.base_path, 'FreiHand', dataset_name, 'rgb', '{}.jpg'.format(prefix))
                 #mask_path = os.path.join(self.base_path, 'mask', '{}.jpg'.format(prefix))
                 image_names.append(image_path)
                 #mask_names.append(mask_path)
@@ -2048,22 +2049,43 @@ class HO3D:
         #self.scale_list = json_load(os.path.join(self.base_path, '%s_scale.json' % self.set_name))
         #import pdb; pdb.set_trace()
         
-        if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':
-            training_file = open(os.path.join(self.base_path,'train.txt'),"r") 
+        if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val' or self.set_name.startswith('val'):
+            training_file = open(os.path.join(self.base_path, 'train.txt'),"r") 
             training_list = training_file.readlines()#66034
             if self.set_name == 'trainval_train':
                 training_list = training_list[:63000]
             elif self.set_name == 'trainval_val':
                 training_list = training_list[63000:]
+            elif self.set_name =='val_occ_0':
+                training_file = open(os.path.join(self.base_path, 'val0.txt'),"r") 
+                training_list = training_file.readlines()
+            elif self.set_name =='val_occ_1':
+                training_file = open(os.path.join(self.base_path, 'val1.txt'),"r")
+                training_list = training_file.readlines()
+            elif self.set_name =='val_occ_2':
+                training_file = open(os.path.join(self.base_path, 'val2.txt'),"r") 
+                training_list = training_file.readlines()
+            elif self.set_name =='val_occ_3':
+                training_file = open(os.path.join(self.base_path, 'val3.txt'),"r")
+                training_list = training_file.readlines()
+            elif self.set_name =='val_occ_4':
+                training_file = open(os.path.join(self.base_path, 'val4.txt'),"r")
+                training_list = training_file.readlines()
+            elif self.set_name =='val_occ_5':
+                training_file = open(os.path.join(self.base_path, 'val5.txt'),"r")
+                training_list = training_file.readlines()
+            elif self.set_name =='val_occ_6':
+                training_file = open(os.path.join(self.base_path, 'val6.txt'),"r")
+                training_list = training_file.readlines()
             
             self.image_list = [i.strip().split('/') for i in training_list]
             self.subfolder = "train"
             # read openpose
-            seq_list = os.listdir(os.path.join(self.base_path,'train'))
-            self.open_2dj_list={}
-            for seq_item in seq_list:
-                open_2dj_list = json_load(os.path.join(self.base_path,'openpose',seq_item,'detect.json'))
-                self.open_2dj_list[seq_item] = open_2dj_list
+            # seq_list = os.listdir(os.path.join(self.base_path,'train'))
+            # self.open_2dj_list={}
+            # for seq_item in seq_list:
+            #     open_2dj_list = json_load(os.path.join(self.base_path,'openpose',seq_item,'detect.json'))
+            #     self.open_2dj_list[seq_item] = open_2dj_list
             #import pdb; pdb.set_trace()
             for_one_sub = False
             if for_one_sub:
@@ -2077,17 +2099,17 @@ class HO3D:
                 self.image_list = new_image_list
 
         elif self.set_name == 'evaluation':
-            evaluation_file = open(os.path.join(self.base_path,'evaluation.txt'),"r") 
+            evaluation_file = open(os.path.join(self.base_path, 'evaluation.txt'),"r") 
             evaluation_list = evaluation_file.readlines()#11524
             self.image_list = [i.strip().split('/') for i in evaluation_list]
             self.subfolder = "evaluation"
             # read openpose
             # '''
-            seq_list = os.listdir(os.path.join(self.base_path,'evaluation'))
-            self.open_2dj_list={}
-            for seq_item in seq_list:
-                open_2dj_list = json_load(os.path.join(self.base_path,'openpose',seq_item,'detect.json'))
-                self.open_2dj_list[seq_item] = open_2dj_list
+            seq_list = os.listdir(os.path.join(self.base_path, 'evaluation'))
+            # self.open_2dj_list={}
+            # for seq_item in seq_list:
+            #     open_2dj_list = json_load(os.path.join(self.base_path,'openpose',seq_item,'detect.json'))
+            #     self.open_2dj_list[seq_item] = open_2dj_list
             # '''
             
         #self.cam_intr = np.array([[617.343, 0.0, 312.42], [0.0, 617.343, 241.42], [0.0, 0.0, 1.0]]).astype(np.float32)
