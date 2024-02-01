@@ -37,7 +37,7 @@ def displaydemo(mode_train, is_val, occ_level, obj_output, image_output, epoch, 
             if nimble_j2d is not None: # means it's nimble hand
                 skin_v_smooth = skin_meshes.verts_padded()[0].detach().cpu().numpy()
                 # save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy(), console=console)
-                save_textured_nimble(demo_path, skin_v_smooth, tex_img=textures[0].detach().cpu().numpy(), console=console)
+                # save_textured_nimble(demo_path, skin_v_smooth, tex_img=textures[0].detach().cpu().numpy(), console=console)
             else:
                 IO().save_mesh(skin_meshes[0], demo_path)
 

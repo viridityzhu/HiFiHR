@@ -5,7 +5,7 @@ from rich.console import Console
 
 import numpy as np
 # import models as models
-import models_res_nimble as models_new
+import models_res_nimble_new as models_new
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -26,8 +26,8 @@ from utils.fh_utils import AverageMeter,EvalUtil, Frei2HO3D
 
 import VAEPose.vae_dex as vae_dex
 
-torch.cuda.set_device(1)
-os.environ['CUDA_VISIBLE_DEVICES'] ='1'
+torch.cuda.set_device(5)
+os.environ['CUDA_VISIBLE_DEVICES'] ='5'
 
 console = Console()
 test_log = {}
@@ -70,6 +70,12 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
         examples = data_dic(sample, dat_name, set_name, args)
         del sample
         
+        # joint_remove = [5, 10, 15, 20]
+        # joint_keep = [i for i in range(examples['joints'].size(1)) if i not in joint_remove]
+        
+        # # (bz, 21, 3)
+        # examples['joints'] = torch.index_select(examples['joints'], 1, torch.tensor(joint_keep).to(args.device))
+        
         if set_name == 'evaluation' and dat_name == 'HO3D':
             root_xyz = examples['root_xyz'].unsqueeze(1)
         else:
@@ -81,7 +87,9 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
 
         # ** positions are relative to middle root.
         if set_name != 'evaluation' and dat_name != 'HO3D':
+            # (bz, 25, 3)
             examples['joints'] = examples['joints'] - root_xyz
+            
             if 'verts' in examples:
                 examples['verts'] = examples['verts'] - root_xyz
 
@@ -498,9 +506,9 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                     if_add_erase = args.if_add_erase,
                     if_add_arm = args.if_add_arm,
                     if_add_fourier = args.if_add_fourier,
-                    arm_aug_ratio = args.arm_aug_ratio,
-                    fourier_aug_ratio = args.fourier_aug_ratio,
+                    # aug_ratio = args.aug_ratio,
                     if_add_occ = args.if_add_occ,
+                    if_nimble_label = args.if_nimble_label,
                     #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
                 )
                 print("Training dataset size: {}".format(len(train_dat)))
@@ -851,7 +859,7 @@ if __name__ == '__main__':
                 setattr(args, parse_key, parse_value)
     
     args = train_options.make_output_dir(args)
-    args.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
     args.ROOT = 9
     args.ROOT_NIMBLE = 11
     args.lambda_pose = args.lambda_pose_list[0]
@@ -898,7 +906,7 @@ if __name__ == '__main__':
     if args.force_init_lr > 0: # default is -1, means not using this
         optimizer.param_groups[0]['lr'] = args.force_init_lr
 
-    model = nn.DataParallel(model.to(args.device), device_ids=[1])
+    model = nn.DataParallel(model.to(args.device), device_ids=[5])
 
     loss_func = LossFunction()
     lpips_loss = lpips.LPIPS(net="alex").to(args.device)

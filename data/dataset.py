@@ -60,12 +60,14 @@ def get_dataset(
     arm_aug_ratio: float = 0.1,
     fourier_aug_ratio: float = 0.1,
     if_add_occ: bool = False,
+    if_nimble_label: bool = False,
 ):
     if dat_name == "FreiHand":
         pose_dataset = FreiHand(
             base_path=base_path,
             set_name = set_name,
             syn_rgb_count = syn_rgb_count,
+            if_nimble_label = if_nimble_label,
         )
         sides = 'right',
     elif dat_name == "Dart":
@@ -263,7 +265,7 @@ class HandDataset(Dataset):
                         # image = imgtrans.add_fourier(image) # FDA
                         image = imgtrans.add_pasta(image) # PASTA
                         
-                        # # histogram matching
+                        # histogram matching
                         # image = imgtrans.hist_match(image)
                         # image = Image.fromarray(image.astype(np.uint8))
                         
@@ -1084,6 +1086,7 @@ class HandDataset(Dataset):
                 sample['K_crop'] = K_crop
             '''
             #415 
+        # original HO3D dataloader
         if self.dat_name == 'HO3D':
             image = self.pose_dataset.get_img(idx)#[3,480,640]
             if 'base_images' in query:
@@ -1277,7 +1280,13 @@ class HandDataset(Dataset):
             sample['trans_matrix'] = trans_matrix
             if 'trans_Ks' in query:
                 sample['K_crop'] = K_crop
+            
+            if self.train:
+                # occ info
+                joint_occ = self.pose_dataset.get_joint_occ(idx)
+                sample["joint_occ"] = np.array(joint_occ).reshape(-1, 1)
 
+        # original HO3D0 dataloader
         if self.dat_name == 'HO3D0':
             # raw image 
             image = self.pose_dataset.get_img(idx)#[3,480,640]
@@ -1369,7 +1378,7 @@ class HandDataset(Dataset):
                 sample['open_2dj_crop']=open_2dj_crop
             
             # Modify xyz
-            if 'handJoints3D' in meta.keys() and "joints" in query:
+            if 'handJoints3D' in meta.keys() and "trans_joints" in query:
                 j3d = meta['handJoints3D']
 
                 '''
@@ -1470,10 +1479,12 @@ class FreiHand:
         base_path=None,
         split = 'train',
         syn_rgb_count = 10,
+        if_nimble_label = False,
     ):
         self.set_name = set_name
         self.base_path = base_path
         self.syn_rgb_count = syn_rgb_count
+        self.if_nimble_label = if_nimble_label
         self.load_dataset()
         self.name = "FreiHand"
         self.split = split
@@ -1489,6 +1500,10 @@ class FreiHand:
         self.mano_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_mano.json' % dataset_name))
         self.joint_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_xyz.json' % dataset_name))
         self.verts_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_verts.json' % self.set_name))
+        
+        if self.if_nimble_label:
+            self.joint_list = json_load('/home/zhuoran/dest/data/nimble_label/nimble_xyz.json')
+            # self.verts_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_verts.json' % self.set_name))
         
         openpose_v2_path = '/home/zhuoran/dest/HandRecon/mydata'
                 
@@ -2050,32 +2065,32 @@ class HO3D:
         #import pdb; pdb.set_trace()
         
         if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val' or self.set_name.startswith('val'):
-            training_file = open(os.path.join(self.base_path, 'train.txt'),"r") 
+            training_file = open(os.path.join(self.base_path,'train.txt'),"r") 
             training_list = training_file.readlines()#66034
             if self.set_name == 'trainval_train':
                 training_list = training_list[:63000]
             elif self.set_name == 'trainval_val':
                 training_list = training_list[63000:]
             elif self.set_name =='val_occ_0':
-                training_file = open(os.path.join(self.base_path, 'val0.txt'),"r") 
+                training_file = open(os.path.join(self.base_path,'val0.txt'),"r") 
                 training_list = training_file.readlines()
             elif self.set_name =='val_occ_1':
-                training_file = open(os.path.join(self.base_path, 'val1.txt'),"r")
+                training_file = open(os.path.join(self.base_path,'val1.txt'),"r")
                 training_list = training_file.readlines()
             elif self.set_name =='val_occ_2':
-                training_file = open(os.path.join(self.base_path, 'val2.txt'),"r") 
+                training_file = open(os.path.join(self.base_path,'val2.txt'),"r") 
                 training_list = training_file.readlines()
             elif self.set_name =='val_occ_3':
-                training_file = open(os.path.join(self.base_path, 'val3.txt'),"r")
+                training_file = open(os.path.join(self.base_path,'val3.txt'),"r")
                 training_list = training_file.readlines()
             elif self.set_name =='val_occ_4':
-                training_file = open(os.path.join(self.base_path, 'val4.txt'),"r")
+                training_file = open(os.path.join(self.base_path,'val4.txt'),"r")
                 training_list = training_file.readlines()
             elif self.set_name =='val_occ_5':
-                training_file = open(os.path.join(self.base_path, 'val5.txt'),"r")
+                training_file = open(os.path.join(self.base_path,'val5.txt'),"r")
                 training_list = training_file.readlines()
             elif self.set_name =='val_occ_6':
-                training_file = open(os.path.join(self.base_path, 'val6.txt'),"r")
+                training_file = open(os.path.join(self.base_path,'val6.txt'),"r")
                 training_list = training_file.readlines()
             
             self.image_list = [i.strip().split('/') for i in training_list]
@@ -2099,13 +2114,13 @@ class HO3D:
                 self.image_list = new_image_list
 
         elif self.set_name == 'evaluation':
-            evaluation_file = open(os.path.join(self.base_path, 'evaluation.txt'),"r") 
+            evaluation_file = open(os.path.join(self.base_path,'evaluation.txt'),"r") 
             evaluation_list = evaluation_file.readlines()#11524
             self.image_list = [i.strip().split('/') for i in evaluation_list]
             self.subfolder = "evaluation"
             # read openpose
             # '''
-            seq_list = os.listdir(os.path.join(self.base_path, 'evaluation'))
+            seq_list = os.listdir(os.path.join(self.base_path,'evaluation'))
             # self.open_2dj_list={}
             # for seq_item in seq_list:
             #     open_2dj_list = json_load(os.path.join(self.base_path,'openpose',seq_item,'detect.json'))
@@ -2124,7 +2139,15 @@ class HO3D:
         #img = func_transforms.resize(img,64)
         #img = func_transforms.to_tensor(img).float()#[3,480,640]
         return img
-
+    
+    def get_joint_occ(self, idx):
+        [seq_name, image_name] = self.image_list[idx]
+        joint_occ_json_path = os.path.join(self.base_path, self.subfolder, seq_name, 'joint_occ', '{}.json'.format(image_name))
+        
+        with open(joint_occ_json_path, 'r') as joint_occ_json:
+            joint_occ_info = json.load(joint_occ_json)
+        
+        return joint_occ_info
     
     def get_masks(self, idx):
         [seq_name, image_name] = self.image_list[idx]

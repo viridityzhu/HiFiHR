@@ -97,6 +97,13 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             
             if 'trans_joints' in data_batch.keys():
                 joints = data_batch['trans_joints'].cuda()#[b,21,3]
+                
+                if args.if_nimble_label:
+                    joint_remove = [5, 10, 15, 20]
+                    joint_keep = [i for i in range(joints.size(1)) if i not in joint_remove]
+                    # (bz, 21, 3)
+                    joints = torch.index_select(joints, 1, torch.tensor(joint_keep).cuda())
+                
                 example_torch['joints'] = joints
                 j2d_gt = proj_func(joints, Ks)
                 example_torch['j2d_gt'] = j2d_gt
@@ -199,6 +206,9 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             #maskRGBs = data_batch['maskRGBs'].cuda()#[b,3,224,224]
             segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
             example_torch['segms_gt'] = segms_gt
+        
+        if 'joint_occ' in data_batch.keys():
+            example_torch['joint_occ'] = torch.tensor(data_batch['joint_occ']).cuda()
         
 
     elif dat_name == 'RHD':

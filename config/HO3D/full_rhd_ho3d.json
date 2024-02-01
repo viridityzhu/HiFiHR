@@ -56,7 +56,7 @@
     "fourier_aug_ratio": 0.6,
 
     "pretrain": "effb3",
-    "pretrain_model": "/home/zhuoran/dest/HandRecon/outputs/HO3D/HO3D_newlr_fix/model/texturehand_74.t7",
+    "pretrain_model": "/home/zhuoran/dest/HandRecon/models/best_ckpt_frei/texturehand_94.t7",
 
     "train_queries": ["trans_images", "trans_Ks", "trans_joints", "scales", "trans_verts", "trans_masks",
         "trans_joints2d"],
