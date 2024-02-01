@@ -43,8 +43,12 @@
     "lambda_bone_direc_3d": 8,
     "syn_rgb_count": 10,
 
+    "if_add_erase": false,
     "if_add_arm": false,
     "if_add_fourier": false,
+    "if_add_occ": true,
+    "arm_aug_ratio": 0.7,
+    "fourier_aug_ratio": 0.6,
 
     "pretrain": "effb3",
     "pretrain_model": "/home/zhuoran/HandRecon/outputs/freihand/fully_rhd_no_tex/model/texturehand_62.t7",

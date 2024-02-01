@@ -97,6 +97,13 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             
             if 'trans_joints' in data_batch.keys():
                 joints = data_batch['trans_joints'].cuda()#[b,21,3]
+                
+                if args.if_nimble_label:
+                    joint_remove = [5, 10, 15, 20]
+                    joint_keep = [i for i in range(joints.size(1)) if i not in joint_remove]
+                    # (bz, 21, 3)
+                    joints = torch.index_select(joints, 1, torch.tensor(joint_keep).cuda())
+                
                 example_torch['joints'] = joints
                 j2d_gt = proj_func(joints, Ks)
                 example_torch['j2d_gt'] = j2d_gt
@@ -199,6 +206,9 @@ def data_dic(data_batch, dat_name, set_name, args) -> dict:
             #maskRGBs = data_batch['maskRGBs'].cuda()#[b,3,224,224]
             segms_gt = masks[:,0].long()#[b, 224, 224]# mask_gt
             example_torch['segms_gt'] = segms_gt
+        
+        if 'joint_occ' in data_batch.keys():
+            example_torch['joint_occ'] = torch.tensor(data_batch['joint_occ']).cuda()
         
 
     elif dat_name == 'RHD':
@@ -463,16 +473,16 @@ def log_3d_results(j3d_ED_list, j2d_ED_list, epoch, mode_train, logging):
     logging.info("{3} Epoch_{0}, Mean_j3d_error (MPJPE):{1}, Mean_j2d_error:{2}".format(epoch, j3d_mean, j2d_mean, trainOrEval))
 
 
-def visualize(mode_train,dat_name,epoch,idx_this,outputs,examples,args, op_outputs=None, writer=None, writer_tag='not-sure', console=None):
+def visualize(mode_train, is_val, occ_level, dat_name,epoch,idx_this,outputs,examples,args, op_outputs=None, writer=None, writer_tag='not-sure', console=None):
     # save images
     if mode_train:
         if idx_this % args.demo_freq == 0:
             with torch.no_grad():
-                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, console=console, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(mode_train, is_val, occ_level, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, console=console, img_wise_save=args.img_wise_save)
     else:
         if idx_this % args.demo_freq_evaluation == 0:
             with torch.no_grad():
-                visualize_util.displadic(mode_train, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, console=console, img_wise_save=args.img_wise_save)
+                visualize_util.displadic(mode_train, is_val, occ_level, args.obj_output, args.image_output, epoch, idx_this, examples, outputs, dat_name, op_outputs=op_outputs, writer=writer, writer_tag=writer_tag, console=console, img_wise_save=args.img_wise_save)
             if args.img_wise_save:
                 visualize_util.multiview_render(args.image_output, outputs, epoch, idx_this)
                 if op_outputs is not None:

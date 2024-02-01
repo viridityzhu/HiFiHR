@@ -8,7 +8,7 @@
     "total_epochs": 600,
     "init_lr": 0.000025,
     "force_init_lr": 0.000025,
-    "lr_steps": [20, 40, 60, 70, 80, 400, 450],
+    "lr_steps": [450],
     "lr_gamma": 0.5,
     "save_interval": 1,
     "controlled_exp": false,
@@ -50,7 +50,7 @@
     "aug_ratio": 0.7,
 
     "pretrain": "effb3",
-    "pretrain_model": "/root/HiFiHR/outputs/freihand/fully_rhd_no_tex_add_occ_fourier_arm_aug/model/texturehand_40.t7",
+    "pretrain_model": "/root/HiFiHR/outputs/freihand/fully_rhd_no_tex_add_occ_fourier_arm_aug/model/texturehand_46.t7",
 
     "train_queries": ["trans_images", "trans_Ks", "trans_joints", "scales", "trans_verts", "trans_masks"],
     "val_queries": [ "images", "Ks", "joints", "scales", "verts"],

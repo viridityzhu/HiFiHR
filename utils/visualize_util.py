@@ -24,8 +24,12 @@ from pytorch3d.structures.meshes import Meshes
 #     FoVPerspectiveCameras,
 # )
 
-def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, nimble_j2d, masks, maskRGBs, render_images,joints,joints_gt, nimble_joints, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', console=None, img_wise_save=False, refhand=None, warphand=None):
+def displaydemo(mode_train, is_val, occ_level, obj_output, image_output, epoch, idx, vertices, faces, imgs, j2d_gt, open_2dj, j2d, hm_j2d, nimble_j2d, masks, maskRGBs, render_images,joints,joints_gt, nimble_joints, skin_meshes=None, textures=None, re_sil=None, re_img=None, re_depth=None, gt_depth=None,pc_gt_depth=None, pc_re_depth=None, obj_uv6 = None, opt_j2d = None, opt_img=None, dataset_name = 'FreiHand', writer=None, writer_tag='not-sure', console=None, img_wise_save=False, refhand=None, warphand=None):
     evalName = '_eval' if not mode_train else ''
+    
+    if is_val:
+        evalName = '_val' + str(occ_level)
+    
     if int(idx) == 0:
         # save 3d obj demo
         if skin_meshes is not None:
@@ -33,7 +37,7 @@ def displaydemo(mode_train, obj_output, image_output, epoch, idx, vertices, face
             if nimble_j2d is not None: # means it's nimble hand
                 skin_v_smooth = skin_meshes.verts_padded()[0].detach().cpu().numpy()
                 # save_textured_nimble(demo_path, skin_v_smooth, textures[0].detach().cpu().numpy(), console=console)
-                save_textured_nimble(demo_path, skin_v_smooth, tex_img=textures[0].detach().cpu().numpy(), console=console)
+                # save_textured_nimble(demo_path, skin_v_smooth, tex_img=textures[0].detach().cpu().numpy(), console=console)
             else:
                 IO().save_mesh(skin_meshes[0], demo_path)
 
@@ -645,7 +649,7 @@ def displaydemo_full(obj_output, image_output, epoch, idx, vertices, faces, imgs
         #import pdb; pdb.set_trace()
 
 
-def displadic(mode_train, obj_output, image_output, epoch, idx, examples, outputs, dat_name, op_outputs=None, opt_j2d=None, opt_img=None, writer=None, console=None, writer_tag='not-sure', img_wise_save=False):
+def displadic(mode_train, is_val, occ_level, obj_output, image_output, epoch, idx, examples, outputs, dat_name, op_outputs=None, opt_j2d=None, opt_img=None, writer=None, console=None, writer_tag='not-sure', img_wise_save=False):
     if 'verts' in outputs:
         vertices = outputs['verts']
     elif 'vertices' in outputs:
@@ -681,7 +685,7 @@ def displadic(mode_train, obj_output, image_output, epoch, idx, examples, output
         opt_j2d = op_outputs['j2d']
         opt_img = op_outputs['re_img']
 
-    displaydemo(mode_train, obj_output=obj_output, image_output=image_output, epoch=epoch, 
+    displaydemo(mode_train, is_val, occ_level, obj_output=obj_output, image_output=image_output, epoch=epoch, 
                 idx=idx, vertices=vertices, faces=faces, imgs=imgs, j2d_gt=j2d_gt, 
                 open_2dj=open_2dj, j2d=j2d, hm_j2d=hm_j2d_list[-1], nimble_j2d=nimble_j2d, masks=masks, 
                 maskRGBs=maskRGBs, render_images=None, joints=joints, joints_gt=joints_gt,

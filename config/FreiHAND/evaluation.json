@@ -12,7 +12,7 @@
     "img_wise_save":false,
     "test_refinement":false,
     "init_lr": 0,
-    "demo_freq":1,
+    "demo_freq":100,
 
     "new_model": true,
     "render": false,
