@@ -24,10 +24,10 @@ from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei, ortho_project
 from utils.fh_utils import AverageMeter,EvalUtil, Frei2HO3D
 
-import VAEPose.vae_dex as vae_dex
+# import VAEPose.vae_dex as vae_dex
 
-torch.cuda.set_device(5)
-os.environ['CUDA_VISIBLE_DEVICES'] ='5'
+torch.cuda.set_device(0)
+os.environ['CUDA_VISIBLE_DEVICES'] ='0'
 
 console = Console()
 test_log = {}
@@ -248,7 +248,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 # ---- evaluation: MPJPE and MPVPE after alignment --------
                 # load eval annotations
                 gt_path = args.freihand_base_path
-                xyz_list, verts_list = json_load(os.path.join(gt_path, 'FreiHand', 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'FreiHand', 'evaluation_verts.json'))
+                xyz_list, verts_list = json_load(os.path.join(gt_path, 'freihand_real', 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'freihand_real', 'evaluation_verts.json'))
                 pose_align_all = []
                 vert_align_all = []
                 pose_3d = np.array(xyz_pred_list)
@@ -509,6 +509,8 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                     # aug_ratio = args.aug_ratio,
                     if_add_occ = args.if_add_occ,
                     if_nimble_label = args.if_nimble_label,
+                    arm_aug_ratio = args.arm_aug_ratio,
+                    fourier_aug_ratio = args.fourier_aug_ratio,
                     #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
                 )
                 print("Training dataset size: {}".format(len(train_dat)))
@@ -859,7 +861,7 @@ if __name__ == '__main__':
                 setattr(args, parse_key, parse_value)
     
     args = train_options.make_output_dir(args)
-    args.device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.ROOT = 9
     args.ROOT_NIMBLE = 11
     args.lambda_pose = args.lambda_pose_list[0]
@@ -906,7 +908,7 @@ if __name__ == '__main__':
     if args.force_init_lr > 0: # default is -1, means not using this
         optimizer.param_groups[0]['lr'] = args.force_init_lr
 
-    model = nn.DataParallel(model.to(args.device), device_ids=[5])
+    model = nn.DataParallel(model.to(args.device), device_ids=[0])
 
     loss_func = LossFunction()
     lpips_loss = lpips.LPIPS(net="alex").to(args.device)

@@ -14,6 +14,7 @@ from PIL import Image, ImageFilter
 from torchvision.transforms import functional as func_transforms
 import torchvision.transforms as transforms
 #import torchvision
+from utils.traineval_util import Mano2Frei
 
 import tqdm
 import pickle
@@ -56,11 +57,12 @@ def get_dataset(
     if_add_erase: bool = False,
     if_add_arm: bool = False,
     if_add_fourier: bool = False,
-    # aug_ratio: float = 0.1,
-    arm_aug_ratio: float = 0.1,
-    fourier_aug_ratio: float = 0.1,
+    # aug_ratio: float = 0,
+    arm_aug_ratio: float = 0,
+    fourier_aug_ratio: float = 0,
     if_add_occ: bool = False,
     if_nimble_label: bool = False,
+    test_on_normal: bool = False,
 ):
     if dat_name == "FreiHand":
         pose_dataset = FreiHand(
@@ -68,6 +70,7 @@ def get_dataset(
             set_name = set_name,
             syn_rgb_count = syn_rgb_count,
             if_nimble_label = if_nimble_label,
+            test_on_normal = test_on_normal,
         )
         sides = 'right',
     elif dat_name == "Dart":
@@ -112,6 +115,7 @@ def get_dataset(
         arm_aug_ratio = arm_aug_ratio,
         fourier_aug_ratio = fourier_aug_ratio,
         if_add_occ = if_add_occ,
+        test_on_normal = test_on_normal
     )
     
     if limit_size is not None:
@@ -142,6 +146,7 @@ class HandDataset(Dataset):
         arm_aug_ratio: float,
         fourier_aug_ratio: float,
         if_add_occ: bool,
+        test_on_normal: bool,
         #directory=None, 
         is_train=None, 
         #set_name=None,
@@ -181,6 +186,7 @@ class HandDataset(Dataset):
         self.arm_aug_ratio = arm_aug_ratio
         self.fourier_aug_ratio = fourier_aug_ratio
         self.if_add_occ = if_add_occ
+        self.test_on_normal = test_on_normal
         
     
     def __len__(self):
@@ -194,7 +200,7 @@ class HandDataset(Dataset):
 
         # Freihand
         if self.dat_name == 'FreiHand':
-            image = self.pose_dataset.get_img(idx)
+            image = self.pose_dataset.get_img(idx, self.test_on_normal)
             if 'images' in query:
                 sample['images']=func_transforms.to_tensor(image).float()#image
             
@@ -222,7 +228,7 @@ class HandDataset(Dataset):
                 mano = self.pose_dataset.get_mano(idx)
                 sample['manos']=mano
             if 'joints' in query or 'trans_joints' in query:
-                joint = self.pose_dataset.get_joint(idx)
+                joint = self.pose_dataset.get_joint(idx, self.test_on_normal)
                 if 'joints' in query:
                     sample['joints']=joint
             if 'verts' in query or 'trans_verts' in query:
@@ -261,13 +267,13 @@ class HandDataset(Dataset):
                         image = imgtrans.add_arm(image, idx)
                         image = Image.fromarray(image)
                     
-                    if self.if_add_fourier and idx < len(self.pose_dataset) * self.aug_ratio:
+                    if self.if_add_fourier and idx < len(self.pose_dataset) * self.fourier_aug_ratio:
                         # image = imgtrans.add_fourier(image)
                         image = imgtrans.add_pasta(image)
                         
                         # histogram matching
                         # image = imgtrans.hist_match(image)
-                        image = Image.fromarray(image.astype(np.uint8))
+                        # image = Image.fromarray(image.astype(np.uint8))
                         
                     # Add occluded objects
                     if self.if_add_occ:
@@ -1480,11 +1486,13 @@ class FreiHand:
         split = 'train',
         syn_rgb_count = 10,
         if_nimble_label = False,
+        test_on_normal = False,
     ):
         self.set_name = set_name
         self.base_path = base_path
         self.syn_rgb_count = syn_rgb_count
         self.if_nimble_label = if_nimble_label
+        self.test_on_normal = test_on_normal
         self.load_dataset()
         self.name = "FreiHand"
         self.split = split
@@ -1504,8 +1512,20 @@ class FreiHand:
         openpose_v2_path = '/root/HiFiHR/'
 
         if self.if_nimble_label:
-            self.joint_list = json_load('/home/zhuoran/dest/data/nimble_label/nimble_xyz.json')
+            self.joint_list = json_load('/root/autodl-tmp/nimble_label/nimble_xyz.json')
             # self.verts_list = json_load(os.path.join(self.base_path, 'FreiHand', '%s_verts.json' % self.set_name))
+        
+        if self.test_on_normal and self.set_name == 'evaluation':
+            # K = np.array([[355.55555555555554, 0.0, 112.0], [0.0, 355.55555555555554, 112.0], [0.0, 0.0, 1]]) # K
+            K = np.array([[311, 0.0, 112.0], [0.0, 311, 112.0], [0.0, 0.0, 1]]) # K
+            
+            self.K_list = np.tile(K[None, :, :], (3960, 1, 1))
+            
+            self.joint_list = json_load(os.path.join(self.base_path, 'normal_xyz.json'))
+            # self.verts_list = json_load(os.path.join(self.base_path, '%s_verts.json' % dataset_name))
+            
+            self.joint_list = self.joint_list[:3960]
+            self.verts_list = self.verts_list[:3960]
                 
         if self.set_name == 'training' or self.set_name == 'trainval_train' or self.set_name == 'trainval_val':# only 32560
             #self.open_2dj_lists = json_load('/data/FreiHand_save/debug/detect_all.json')
@@ -1576,6 +1596,10 @@ class FreiHand:
             
         elif self.set_name == 'evaluation':
             img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, 'freihand_real', self.set_name, 'rgb')))]
+            
+            if self.test_on_normal:
+                img_idxs = [int(imgname.split(".")[0]) for imgname in sorted(os.listdir(os.path.join(self.base_path, 'target_rgb')))]
+            
             self.prefix_template = "{:08d}"
             prefixes = [self.prefix_template.format(idx) for idx in img_idxs]
             self.open_2dj_lists = json_load(os.path.join(openpose_v2_path, 'openpose_v2/evaluation', 'detect.json'))
@@ -1584,7 +1608,7 @@ class FreiHand:
             self.open_2dj_list = self.open_2dj_lists[0]
             self.open_2dj_con_list = self.open_2dj_lists[1]
             #self.CRFmask_dir = '/data/FreiHand_save/CRFmask/evaluation'
-            self.CRFmask_dir = os.path.join(self.base_path, 'CRFmask/evaluation')
+            self.CRFmask_dir = os.path.join(self.base_path, 'CRFmask/evaluation')         
         
         image_names = []
         mask_names = []
@@ -1592,10 +1616,10 @@ class FreiHand:
         if self.set_name == 'training':
             for count in range(self.syn_rgb_count):
                 for idx, prefix in enumerate(prefixes):
-                    mask_path = os.path.join(self.base_path, 'FreiHand_syn', 'segmentation', '{}.png'.format(prefix))
+                    mask_path = os.path.join(self.base_path, 'freihand', 'segmentation', '{}.png'.format(prefix))
                     mask_names.append(mask_path)
                     
-                    image_path = os.path.join(self.base_path, 'FreiHand_syn', 'rgb' + '_' + str(count), '{}.png'.format(prefix))
+                    image_path = os.path.join(self.base_path, 'freihand', 'rgb' + '_' + str(count), '{}.png'.format(prefix))
                     image_names.append(image_path)
                     
                     # mask_path = os.path.join(self.base_path, dataset_name, 'mask', '{}.jpg'.format(prefix))
@@ -1608,18 +1632,26 @@ class FreiHand:
                     
         elif self.set_name == 'evaluation':
             for idx, prefix in enumerate(prefixes):
-                image_path = os.path.join(self.base_path, 'freihand_real', dataset_name, 'rgb', '{}.jpg'.format(prefix))
-                #mask_path = os.path.join(self.base_path, 'mask', '{}.jpg'.format(prefix))
-                image_names.append(image_path)
-                #mask_names.append(mask_path)
+                if self.test_on_normal:
+                    image_path = os.path.join(self.base_path, 'target_rgb', '{}.png'.format(prefix))
+                    image_names.append(image_path)
+                else:  
+                    image_path = os.path.join(self.base_path, 'freihand_real', dataset_name, 'rgb', '{}.jpg'.format(prefix))
+                    #mask_path = os.path.join(self.base_path, 'mask', '{}.jpg'.format(prefix))
+                    image_names.append(image_path)
+                    #mask_names.append(mask_path)
         self.image_names = image_names
         self.mask_names = mask_names
         del image_names
         del prefixes
 
-    def get_img(self, idx):
+    def get_img(self, idx, test_on_normal):
         image_path = self.image_names[idx]
         img = Image.open(image_path).convert('RGB')
+        
+        if test_on_normal:
+            img = img.resize((224, 224))
+        
         #img = func_transforms.to_tensor(img).float()
         return img
 
@@ -1708,9 +1740,14 @@ class FreiHand:
         mano = self.mano_list[idx]
         mano = torch.FloatTensor(mano)
         return mano
-    def get_joint(self,idx):
+    def get_joint(self,idx, test_on_normal):
         joint = self.joint_list[idx]
         joint = torch.FloatTensor(joint)
+        
+        # test_on_normal
+        if test_on_normal:
+            joint = Mano2Frei(joint.unsqueeze(0))[0]
+        
         return joint
     def get_vert(self, idx):
         verts = self.verts_list[idx]

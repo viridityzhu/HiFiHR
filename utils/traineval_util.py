@@ -347,6 +347,7 @@ def trans_proj(outputs, Ks_this, dat_name, is_ortho=False):
 
 def trans_proj_j2d(outputs, Ks_this, scales=None, is_ortho=False, root_xyz=None, which_joints='joints'):
     j3d = outputs[which_joints]
+    
     if root_xyz is not None and scales is not None:
         cal_scale = torch.norm(outputs['joints'][:, 9] - outputs['joints'][:, 10], dim=-1) # metric length of a reference bone
         scales = scales.to(j3d.device) / cal_scale

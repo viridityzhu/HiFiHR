@@ -24,9 +24,9 @@ from utils.concat_dataloader import ConcatDataloader
 from utils.traineval_util import data_dic, log_3d_results, save_2d_result,save_2d, mano_fitting, save_3d, trans_proj_j2d, visualize, write_to_tb, Mano2Frei, ortho_project
 from utils.fh_utils import AverageMeter,EvalUtil, Frei2HO3D
 
-import VAEPose.vae_dex as vae_dex
+# import VAEPose.vae_dex as vae_dex
 
-torch.cuda.set_device(1)
+torch.cuda.set_device(0)
 os.environ['CUDA_VISIBLE_DEVICES'] ='1'
 
 console = Console()
@@ -55,6 +55,8 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
     
     evalutil = EvalUtil()
     xyz_pred_list, verts_pred_list = list(), list()
+    
+    xyz_gt_normal_list = list()
     
     # validation
     xyz_pred_val_list = list()
@@ -138,6 +140,7 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
             for i in range(outputs['joints'].shape[0]):
                 if dat_name == "FreiHand":
                     xyz_pred_list.append(outputs['joints'][i].cpu().detach().numpy())
+                    xyz_gt_normal_list.append(examples['joints'][i].cpu().detach().numpy())
                 elif dat_name == "HO3D":
                     # change Frei joint to HO3D joint for evaluation
                     output_joints_ho3d = Frei2HO3D(outputs['joints'])
@@ -241,6 +244,10 @@ def train_an_epoch(mode_train, dat_name, epoch, train_loader, model, optimizer, 
                 # load eval annotations
                 gt_path = args.freihand_base_path
                 xyz_list, verts_list = json_load(os.path.join(gt_path, 'freihand_real', 'evaluation_xyz.json')), json_load(os.path.join(gt_path, 'freihand_real', 'evaluation_verts.json'))
+                
+                if args.test_on_normal:
+                    xyz_list = xyz_gt_normal_list
+                
                 pose_align_all = []
                 vert_align_all = []
                 pose_3d = np.array(xyz_pred_list)
@@ -740,6 +747,7 @@ def train(base_path, set_name=None, writer = None, optimizer = None, scheduler =
                 queries = val_queries,
                 train = False,
                 limit_size=limit_size,
+                test_on_normal = args.test_on_normal
                 #transform=transforms.Compose([transforms.Rescale(256),transforms.ToTensor()]))
             )
             print("Validation dataset size: {}".format(len(val_dat)))
